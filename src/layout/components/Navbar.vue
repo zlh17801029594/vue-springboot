@@ -76,8 +76,13 @@ export default {
     },
     async logout() {
       await this.$store.dispatch('user/logout')
-      this.$router.push(`/login?redirect=${this.$route.fullPath}`)
+      // this.$router.push(`/login?redirect=${this.$route.fullPath}`)
+      window.location.href = 'http://192.168.204.67:8085/logout'
     }
+
+    // logout(){
+    //   window.location.href = 'http://192.168.204.67:8085/logout'
+    // }
   }
 }
 </script>

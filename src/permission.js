@@ -3,12 +3,19 @@ import store from './store'
 import { Message } from 'element-ui'
 import NProgress from 'nprogress' // progress bar
 import 'nprogress/nprogress.css' // progress bar style
-import { getToken } from '@/utils/auth' // get token from cookie
+import { getToken, setToken } from '@/utils/auth' // get token from cookie
 import getPageTitle from '@/utils/get-page-title'
 
 NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
 const whiteList = ['/login', '/auth-redirect'] // no redirect whitelist
+
+const xxl_sso_sessionid = getQueryVariable('xxl_sso_sessionid')
+
+if(xxl_sso_sessionid){
+  setToken(decodeURIComponent(xxl_sso_sessionid))
+}
+
 
 router.beforeEach(async(to, from, next) => {
   // start progress bar
@@ -38,9 +45,9 @@ router.beforeEach(async(to, from, next) => {
 
           // console.log(store.getters.menus)
           // 数据引接
-          const menus = await store.dispatch('user/findMenus')
+          // const menus = await store.dispatch('user/findMenus')
           // 服务申请
-          // const menus = []
+          const menus = []
           // console.log(store.getters.menus)
 
           // generate accessible routes map based on roles
@@ -69,7 +76,8 @@ router.beforeEach(async(to, from, next) => {
           // remove token and go to login page to re-login
           await store.dispatch('user/resetToken')
           Message.error(error || 'Has Error')
-          next(`/login?redirect=${to.path}`)
+          // next(`/login?redirect=${to.path}`)
+          window.location.href = 'http://192.168.204.67:8085/login?redirect_url=http://localhost:9527'
           NProgress.done()
         }
       }
@@ -82,7 +90,8 @@ router.beforeEach(async(to, from, next) => {
       next()
     } else {
       // other pages that do not have permission to access are redirected to the login page.
-      next(`/login?redirect=${to.path}`)
+      // next(`/login?redirect=${to.path}`)
+      window.location.href = 'http://192.168.204.67:8085/login?redirect_url=http://localhost:9527'
       NProgress.done()
     }
   }
@@ -92,3 +101,15 @@ router.afterEach(() => {
   // finish progress bar
   NProgress.done()
 })
+
+
+function getQueryVariable(variable)
+{
+       var query = window.location.search.substring(1);
+       var vars = query.split("&");
+       for (var i=0;i<vars.length;i++) {
+               var pair = vars[i].split("=");
+               if(pair[0] == variable){return pair[1];}
+       }
+       return(false);
+}

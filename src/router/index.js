@@ -398,42 +398,105 @@ export const asyncRoutes = [
     ]
   },*/
 
+  // {
+  //   path: '/manager',
+  //   component: Layout,
+  //   children: [
+  //     {
+  //       path: 'index',
+  //       name: 'manager',
+  //       component: () => import('@/views/commons/manager'),
+  //       meta: {title: '配置', icon: 'component'}
+  //     }
+  //   ]
+  // },
+  // {
+  //   path: '/services',
+  //   component: Layout,
+  //   children: [
+  //     {
+  //       path: 'index',
+  //       name: 'services',
+  //       component: () => import('@/views/commons/services-panel'),
+  //       meta: {title: '服务面板', icon: 'component'}
+  //     }
+  //   ]
+  // },
+  // {
+  //   path: '/services-tree',
+  //   component: Layout,
+  //   children: [
+  //     {
+  //       path: 'index',
+  //       name: 'services-tree',
+  //       component: () => import('@/views/commons/services-panel-tree'),
+  //       meta: {title: '服务面板2', icon: 'component'}
+  //     }
+  //   ]
+  // },
+
+  // {
+  //   path: '/api',
+  //   component: Layout,
+  //   children: [
+  //     {
+  //       path: 'index',
+  //       name: 'api',
+  //       component: () => import('@/views/commons/api'),
+  //       meta: {title: '接口数据', icon: 'component'}
+  //     }
+  //   ]
+  // },
+
+  // {
+  //   path: '/test',
+  //   component: Layout,
+  //   children: [
+  //     {
+  //       path: 'index',
+  //       name: 'test',
+  //       component: () => import('@/views/commons/test-hidden'),
+  //       meta: {title: 'test', icon: 'component'}
+  //     }
+  //   ]
+  // },
   {
-    path: '/manager',
+    path: '/maintain-permission',
     component: Layout,
     children: [
       {
         path: 'index',
-        name: 'manager',
-        component: () => import('@/views/commons/manager'),
-        meta: {title: '配置', icon: 'component'}
+        name: 'maintain-permission',
+        component: () => import('@/views/commons/maintain-permission'),
+        meta: {title: '接口维护', icon: 'component'}
       }
     ]
   },
   {
-    path: '/services',
+    path: '/apply-for',
     component: Layout,
     children: [
       {
         path: 'index',
-        name: 'services',
-        component: () => import('@/views/commons/services-panel'),
-        meta: {title: '服务面板', icon: 'component'}
+        name: 'apply-for',
+        component: () => import('@/views/commons/apply-for'),
+        meta: {title: '接口申请', icon: 'component'}
       }
     ]
   },
   {
-    path: '/services-tree',
+    path: '/approve',
     component: Layout,
     children: [
       {
         path: 'index',
-        name: 'services-tree',
-        component: () => import('@/views/commons/services-panel-tree'),
-        meta: {title: '服务面板2', icon: 'component'}
+        name: 'approve',
+        component: () => import('@/views/commons/approve'),
+        meta: {title: '接口审批', icon: 'component'}
       }
     ]
   },
+
   // 404 page must be placed at the end !!!
   // { path: '*', redirect: '/404', hidden: true }
   { path: '*', redirect: '/', hidden: true }

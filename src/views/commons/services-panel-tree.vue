@@ -21,6 +21,8 @@
 
 <script>
   import {getService} from '@/api/user'
+  import {getToken} from '@/utils/auth'
+
   export default {
     name: "services-panel-tree",
     data() {
@@ -36,7 +38,7 @@
 
     },
     created() {
-      getService().then(response => {
+      getService(getToken()).then(response => {
         console.log(response)
         this.data = response.data
       })

@@ -112,6 +112,7 @@
 
 <script>
   import {getService} from '@/api/user'
+  import {getToken} from '@/utils/auth'
   export default {
     name: "services-panel",
     data() {
@@ -177,7 +178,7 @@
       }
     },
     created() {
-      getService().then(response => {
+      getService(getToken()).then(response => {
         this.data = response.data
         //console.log(response.data)
       })
