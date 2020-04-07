@@ -77,7 +77,7 @@ router.beforeEach(async(to, from, next) => {
           await store.dispatch('user/resetToken')
           Message.error(error || 'Has Error')
           // next(`/login?redirect=${to.path}`)
-          window.location.href = 'http://192.168.204.67:8085/login?redirect_url=http://localhost:9527'
+          window.location.href = 'http://192.168.204.67:8085/login?redirect_url=http://192.168.243.87:9527'
           NProgress.done()
         }
       }
@@ -91,7 +91,7 @@ router.beforeEach(async(to, from, next) => {
     } else {
       // other pages that do not have permission to access are redirected to the login page.
       // next(`/login?redirect=${to.path}`)
-      window.location.href = 'http://192.168.204.67:8085/login?redirect_url=http://localhost:9527'
+      window.location.href = 'http://192.168.204.67:8085/login?redirect_url=http://192.168.243.87:9527'
       NProgress.done()
     }
   }
