@@ -20,7 +20,9 @@ service.interceptors.request.use(
       // ['X-Token'] is a custom headers key
       // please modify it according to the actual situation
       // config.headers['X-Token'] = getToken()
+      config.headers['xxl_sso_sessionid'] = getToken()
     }
+    console.log(config)
     return config
   },
   error => {
@@ -46,27 +48,33 @@ service.interceptors.response.use(
     const res = response.data
 
     // if the custom code is not 20000, it is judged as an error.
-    if (res.code !== 20000) {
+    if (res.code !== 200) {
       Message({
         message: res.message || 'Error',
         type: 'error',
         duration: 5 * 1000
       })
 
+      console.log('res1:', res)
       // 50008: Illegal token; 50012: Other clients logged in; 50014: Token expired;
-      if (res.code === 50008 || res.code === 50012 || res.code === 50014 || res.code === 501) {
+      if (res.code === 501 || res.code === 503 || res.code === 505) {
         // to re-login
-        MessageBox.confirm('You have been logged out, you can cancel to stay on this page, or log in again', 'Confirm logout', {
-          confirmButtonText: 'Re-Login',
-          cancelButtonText: 'Cancel',
-          type: 'warning'
-        }).then(() => {
-          store.dispatch('user/resetToken').then(() => {
-            location.reload()
-          })
+        // MessageBox.confirm('You have been logged out, you can cancel to stay on this page, or log in again', 'Confirm logout', {
+        //   confirmButtonText: 'Re-Login',
+        //   cancelButtonText: 'Cancel',
+        //   type: 'warning'
+        // }).then(() => {
+        //   console.log('res2:', res)
+        //   store.dispatch('user/resetToken').then(() => {
+        //     location.reload()
+        //   })
+        // })
+        store.dispatch('user/resetToken').then(() => {
+          location.href = 'http://192.168.204.67:8085/logout?path=' + location.href
         })
       }
-      return Promise.reject(new Error(res.message || 'Error'))
+      //return Promise.reject(new Error(res.message || 'Error'))
+      return Promise.reject(res)
     } else {
       return res
     }

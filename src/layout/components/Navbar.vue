@@ -74,15 +74,16 @@ export default {
     toggleSideBar() {
       this.$store.dispatch('app/toggleSideBar')
     },
-    async logout() {
-      await this.$store.dispatch('user/logout')
-      // this.$router.push(`/login?redirect=${this.$route.fullPath}`)
-      window.location.href = 'http://192.168.204.67:8085/logout'
-    }
-
-    // logout(){
+    // async logout() {
+    //   await this.$store.dispatch('user/logout')
+    //   // this.$router.push(`/login?redirect=${this.$route.fullPath}`)
     //   window.location.href = 'http://192.168.204.67:8085/logout'
     // }
+
+    async logout(){
+      await this.$store.dispatch('user/resetToken')
+      location.href = 'http://192.168.204.67:8085/logout?path=' + location.href
+    }
   }
 }
 </script>

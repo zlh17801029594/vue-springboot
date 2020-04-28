@@ -8,11 +8,10 @@ export function login(data) {
   })
 }
 
-export function getInfo(xxl_sso_sessionid) {
+export function getInfo() {
   return request({
     url: '/user/info',
-    method: 'get',
-    params: { xxl_sso_sessionid }
+    method: 'get'
   })
 }
 
@@ -62,26 +61,23 @@ export function exchangeMenu(data) {
   })
 }
 
-export function getService(xxl_sso_sessionid) {
+export function getServiceDemo() {
   return request({
     url: '/service',
-    method: 'get',
-    params: { xxl_sso_sessionid }
+    method: 'get'
   })
 }
 
-export function getApi(xxl_sso_sessionid) {
+export function getApi() {
   return request({
     url: '/api',
-    method: 'get',
-    params: { xxl_sso_sessionid }
+    method: 'get'
   })
 }
 
-export function logout(xxl_sso_sessionid) {
+export function logout() {
   return request({
     url: '/user/logout',
-    method: 'post',
-    params: { xxl_sso_sessionid }
+    method: 'post'
   })
 }

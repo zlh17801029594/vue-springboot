@@ -58,7 +58,7 @@ const actions = {
   // get user info
   getInfo({ commit, state }) {
     return new Promise((resolve, reject) => {
-      getInfo(getToken()).then(response => {
+      getInfo().then(response => {
         const { data } = response
 
         if (!data) {
@@ -113,7 +113,7 @@ const actions = {
   // user logout
   logout({ commit, state }) {
     return new Promise((resolve, reject) => {
-      logout(getToken()).then(() => {
+      logout().then(() => {
         commit('SET_TOKEN', '')
         commit('SET_ROLES', [])
         removeToken()
@@ -131,6 +131,14 @@ const actions = {
       commit('SET_TOKEN', '')
       commit('SET_ROLES', [])
       removeToken()
+      resolve()
+    })
+  },
+
+  setStoreToken({commit}, session) {
+    return new Promise(resolve => {
+      commit('SET_TOKEN', session)
+      setToken(session)
       resolve()
     })
   },

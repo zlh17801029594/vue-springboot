@@ -1,13 +1,20 @@
 <template>
   <el-container>
-    <el-header align="right">
-        <el-button type="primary" @click="click1">申请接口</el-button>
+    <el-header align="left">
+      <span>
+        <el-button type="primary" size="small" @click="click1">申请接口</el-button>
+        <span style="font-size: 14px;">提示：
+          <span :style="{color: setColor(-1)}">蓝色</span>:待审批、
+          <span :style="{color: setColor(2)}">绿色</span>:已获取(启用状态)、
+          <span :style="{color: setColor(1)}">橙色</span>:已获取(停用状态)
+        </span>
+      </span>
     </el-header>
     <el-container>
         <el-aside ref="left">
             <el-tree
             ref="tree"
-            :data="data"
+            :data="treeData"
             show-checkbox
             default-expand-all
             node-key="id"
@@ -16,7 +23,7 @@
             @node-click="clickNode"
             :props="defaultProps">
             <span class="custom-tree-node" slot-scope="{node, data}">
-                <span>{{node.label}}</span>
+                <span>{{ node.label }}</span>
                 <span>
                 
                 </span>
@@ -24,178 +31,124 @@
             </el-tree>
         </el-aside>
         <el-main ref="right">
-            <el-collapse v-for="(service) in data" v-model="activeNames" @change="handleChange" accordion>
-                <el-collapse-item :title="titleFormat([service.label, service.basePath])" :name="service.label">
-                            <el-table :data="service.children" stripe border style="width: 100%;" @selection-change="handleSelectionChange">
-                            <el-table-column type="expand">
-                                <template slot-scope="props">
-                                <el-form label-position="left" inline class="demo-table-expand">
-                                    <el-form-item label="接口描述">
-                                    <span>{{ props.row.label }}</span>
-                                    </el-form-item>
-                                    <el-form-item label="接口uri">
-                                    <span>{{ props.row.uri }}</span>
-                                    </el-form-item>
-                                    <el-form-item label="请求方法">
-                                    <span>{{ props.row.method }}</span>
-                                    </el-form-item>
-                                    <el-form-item label="请求参数">
-                                    <span>
-                                        <el-table :data="props.row.parameters" stripe border style="width: 100%;">
-                                        <el-table-column
-                                            label="参数名"
-                                            prop="name">
-                                        </el-table-column>
-                                        <el-table-column
-                                            label="参数位置"
-                                            prop="in">
-                                        </el-table-column>
-                                        <el-table-column
-                                            label="参数描述"
-                                            prop="description">
-                                        </el-table-column>
-                                        <el-table-column
-                                            label="是否必须"
-                                            prop="required"
-                                            :formatter="booleanFormat">
-                                        </el-table-column>
-                                        <el-table-column
-                                            label="参数类型"
-                                            prop="type">
-                                        </el-table-column>
-                                        <el-table-column
-                                            label="是否可以为空白字符串"
-                                            prop="allowEmptyValue"
-                                            :formatter="booleanFormat">
-                                        </el-table-column>
-                                        <el-table-column
-                                            label="参数样例"
-                                            prop="example">
-                                        </el-table-column>
-                                        </el-table>
-                                    </span>
-                                    </el-form-item>
-                                    <el-form-item label="返回结果样例">
-                                    <pre v-html="syntaxHighlight(props.row.result)"></pre>
-                                    <!--<pre>{{ props.row.result}}</pre>-->
-                                    <!--<span>{{ props.row.result}}</span>-->
-                                    <!--:span布局-->
-                                    <!--<span>
-                                        <div  v-for="person in test" style="width: 100%;">
-                                        <el-row>
-                                            <el-col :span="8">{{person.name}}</el-col>
-                                            <el-col :span="8">{{person.age}}</el-col>
-                                        </el-row>
-                                        </div>
-                                    </span>-->
-                                    </el-form-item>
-                                    <el-form-item label="接收参数方式">
-                                    <span>{{ props.row.consumes }}</span>
-                                    </el-form-item>
-                                    <el-form-item label="返回结果方式">
-                                    <span>{{ props.row.produces }}</span>
-                                    </el-form-item>
-                                    <el-form-item label="响应码">
-                                    <el-table :data="props.row.responses" stripe border style="width: 100%;">
-                                        <el-table-column
-                                        label="响应码"
-                                        prop="code">
-                                        </el-table-column>
-                                        <el-table-column
-                                        label="描述"
-                                        prop="description">
-                                        </el-table-column>
-                                    </el-table>
-                                    </el-form-item>
-                                </el-form>
-                                </template>
-                            </el-table-column>
-                            <el-table-column
-                                label="接口uri"
-                                prop="uri">
-                            </el-table-column>
-                            <el-table-column
-                                label="接口描述"
-                                prop="label">
-                            </el-table-column>
-                            <el-table-column
-                                label="请求方法"
-                                prop="method">
-                            </el-table-column>
-                            </el-table>
+          <el-scrollbar style="height:100%">
+            <el-collapse v-for="(service, index) in data" :key="index" v-model="activeNames" @change="handleChange" accordion>
+                <el-collapse-item :title="titleFormat([service.label, service.basePath])" :name="service.id">
+                  <el-collapse v-for="(api, index) in service.children" :key="index" v-model="activeNames1" accordion style="padding-left: 20px">
+                    <el-collapse-item :title="titleFormat([api.label, api.url])" :name="api.id">
+                      <apiInfo :api="api" />
+                    </el-collapse-item>
+                  </el-collapse>
                 </el-collapse-item>
             </el-collapse>
+          </el-scrollbar>
         </el-main>
     </el-container>
     <el-dialog
-        :visible.sync="drawer"
-        :before-close="closeDrawer"
-        ref="drawer"
+        :visible.sync="dialog"
+        :before-close="closeDialog"
+        ref="dialog"
         :center="true"
         width="550px">
-        <info :options='data' :selected='selected' />
+        <info ref="info" :data='treeData' :selected='selected' />
+        <span slot="footer">
+          <el-button size="small" @click="dialog=false">取消</el-button>
+          <el-button type="primary" size="small" @click="applyApi">申请></el-button>
+        </span>
     </el-dialog>
   </el-container>
 </template>
 
 <script>
-import {getService} from '@/api/user'
-import {getToken} from '@/utils/auth'
 import BScroll from 'better-scroll'
 import info from './apply-for-info'
+import apiInfo from './api-info-view'
+
+import {getService} from '@/api/ms_api'
+import {createApply} from '@/api/ms_apply'
 
 export default {
     components: {
-        info
+        info, apiInfo
     },
     data() {
       return {
-        activeNames: [],
-        activeNames1: [],
+        activeNames: '',
+        activeNames1: '',
         data: [],
         defaultProps: {
           children: 'children',
           label: 'label'
         },
-        test: [{
-          name: 'zhou',
-          age: '24'
-        },{
-          name: 'ming',
-          age: '25'
-        }],
-        drawer: false,
-        selected: []
+        dialog: false,
+        selected: [],
+        id: 0
+      }
+    },
+    computed: {
+      treeData(){
+        return this.filterProp(this.data)
       }
     },
     methods: {
-      click1(){
-        this.selected = this.$refs.tree.getCheckedNodes(true, false)
-        console.log(this.selected)
-        this.drawer = true
+      filterProp(data){
+        if(data instanceof Array){
+          return data.map(item => {
+            return this.filterProp(item)
+          })
+        }else{
+          if(data.children){
+            const children = this.filterProp(data.children)
+            return {
+              id: data.id,
+              label: data.label,
+              children: children
+            }
+          }else{
+            return {
+              id: data.id,
+              label: data.label,
+              // 真实环境通过用户关系表查询
+              status: data.id === 1 ? -1 : 0,
+              // 真实数据改成status判断
+              disabled: data.id === 1
+            }
+          }
+        }
       },
-      closeDrawer(done){
+      click1(){
+        const selectNodeIds = this.$refs.tree.getCheckedKeys(true)
+        this.selected = selectNodeIds.map(nodeId => {
+          const node = this.$refs.tree.getNode(nodeId)
+          return [node.parent.data.id, nodeId]
+        })
+        this.dialog = true
+      },
+      applyApi(){
+        const msUserApis = this.$refs.info.getApply()
+        console.log(msUserApis)
+        createApply(msUserApis).then(response => {
+          console.log(response)
+          this.$message({
+              type: 'success',
+              message: '操作成功'
+            })
+        })
+        this.dialog = false
+      },
+      closeDialog(done){
         done()
       },
       clickNode (data, node, obj) {	
-      //点击节点触发,不同层级的level事件不同
-      //可对应界面变化，比如通过v-if控制模块显隐
         if (node.level === 1) {
-            this.activeNames = data.label
+            this.activeNames = data.id
+            this.activeNames1 = ''
             console.log(this.activeNames, this.activeNames1)
-        //   this.currLevel = 1
-        //   this.currSignal = node.data
         } else if (node.level === 2) {
-            this.activeNames = node.parent.label
-            this.activeNames1 = [data.label]
+            this.activeNames = node.parent.data.id
+            this.activeNames1 = data.id
             console.log(this.activeNames, this.activeNames1)
-        //   this.currLevel = 2
-        //   this.currChannel = node.data
-        } else if (node.level === 3) {
-            this.activeNames = node.parent.parent.label
-            this.activeNames1 = [node.parent.label]
-            console.log(this.activeNames, this.activeNames1)
-		}
+        }
       },
       handleChange(val) {
         console.log(val)
@@ -250,37 +203,52 @@ export default {
           this.right = new BScroll((this.$refs.right), {
               click: true
           })
+      },
+      setColor(status) {
+        if (status === 0) {
+          return '#909399'
+        } else if (status === 1) {
+          return '#E6A23C'
+        } else if (status === 2) {
+          return '#67C23A'
+        } else if (status === -1) {
+          return '#409EFF'
+        }
+      },
+      setId(data){
+        const arr = data.children
+        if(data instanceof Array){
+          data.forEach(item => {
+            this.setId(item)
+          })
+        }else if(arr instanceof Array){
+          this.$set(data, 'id', this.id++)
+          arr.forEach(item => {
+            this.setId(item)
+          })
+        }else{
+          this.$set(data, 'id', this.id++)
+        }
       }
     },
     created() {
-      getService(getToken()).then(response => {
+      getService().then(response => {
         this.data = response.data
-        //console.log(response.data)
+        console.log(this.data)
       })
     }
 }
 </script>
 <style>
-  .custom-tree-node {
+  /* .custom-tree-node {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
     font-size: 14px;
     padding-right: 8px;
-  }
-  .demo-table-expand {
-    font-size: 0;
-  }
-  .demo-table-expand label {
-    width: 100px;
-    color: #99a9bf;
-  }
-  .demo-table-expand .el-form-item {
-    margin-right: 0;
-    margin-bottom: 0;
-    width: 100%;
-  }
+  } */
+  
   /*pre {outline: 1px solid #ccc; }*/
   .string { color: green; }
   .number { color: darkorange; }
@@ -288,13 +256,20 @@ export default {
   .null { color: magenta; }
   .key { color: red; }
 
+  .el-header {
+    line-height: 60px;
+  }
+  .el-main {
+    padding: 0 20px;
+  }
   .el-aside{
-      padding: 0px
+      padding: 0 20px;
+      background: #FFF
   }
-  .el-main{
-      padding: 0px
-  }
-  .el-header{
+  /* .el-header{
       padding-top: 10px
+  } */
+  .el-scrollbar__wrap {
+    overflow-x: hidden;
   }
 </style>

@@ -1,16 +1,16 @@
 <template>
     <el-form label-position="left" label-width="100px">
-        <el-form-item label="用户">
-            <el-input value="admin" :disabled="true" />
-        </el-form-item>
+        <!-- <el-form-item label="用户">
+            <el-input v-model="test" :disabled="true" />
+        </el-form-item> -->
         <el-form-item label="已申请接口">
             <el-cascader
-            ref="cascader"
-            v-model="selected1"
-            :options="options1"
-            :props="props"
-            :show-all-levels="false"
-            @change="change"></el-cascader>
+                ref="cascader"
+                v-model="selectedIds"
+                :options="data"
+                :props="props"
+                :show-all-levels="false">
+            </el-cascader>
         </el-form-item>
         <el-form-item label="使用截至日期">
             <el-date-picker
@@ -24,7 +24,7 @@
 export default {
     name: 'info',
     props:{
-        options:{
+        data:{
             type: Array
         },
         selected: {
@@ -32,13 +32,21 @@ export default {
         }
     },
     computed: {
-        
+        // selectedIds(){
+        //     return this.selected
+        // }
     },
     methods:{
         change(){
-            console.log(this.selected)
-            console.log(this.selected1)
+            console.log(this.selectedIds)
             console.log(this.$refs.cascader.getCheckedNodes(true))
+        },
+        getApply(){
+            const nodes = this.$refs.cascader.getCheckedNodes(true)
+            return  {
+                ids: nodes.map(node => node.data.id),
+                expireTime: this.value1
+            }
         }
     },
     data(){
@@ -47,7 +55,6 @@ export default {
                 multiple: true,
                 value: 'id'
             },
-            selected1: [[1,2], [1, 3]],
             options1: [{
                 id: 1,
                 label: 'Flightinfo信息服务',
@@ -69,6 +76,7 @@ export default {
                         label: '接口2'
                     }]
             }],
+            selectedIds: this.selected,
             value1: ''
         }
     }

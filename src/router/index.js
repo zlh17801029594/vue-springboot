@@ -461,14 +461,34 @@ export const asyncRoutes = [
   //   ]
   // },
   {
-    path: '/maintain-permission',
+    path: '/ms_api',
     component: Layout,
     children: [
       {
         path: 'index',
         name: 'maintain-permission',
-        component: () => import('@/views/commons/maintain-permission'),
-        meta: {title: '接口维护', icon: 'component'}
+        component: () => import('@/views/commons/ms_api'),
+        meta: {
+          title: '接口管理', 
+          icon: 'component',
+          roles: ['SUPER_ADMIN', 'ADMIN']
+        }
+      }
+    ]
+  },
+  {
+    path: '/ms_user_api',
+    component: Layout,
+    children: [
+      {
+        path: 'index',
+        name: 'approve',
+        component: () => import('@/views/commons/ms_user_api'),
+        meta: {
+          title: '用户管理', 
+          icon: 'component',
+          roles: ['SUPER_ADMIN', 'ADMIN']
+        }
       }
     ]
   },
@@ -485,13 +505,13 @@ export const asyncRoutes = [
     ]
   },
   {
-    path: '/approve',
+    path: '/ms_apply',
     component: Layout,
     children: [
       {
         path: 'index',
-        name: 'approve',
-        component: () => import('@/views/commons/approve'),
+        name: 'ms_apply',
+        component: () => import('@/views/commons/ms_apply'),
         meta: {title: '接口审批', icon: 'component'}
       }
     ]

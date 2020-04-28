@@ -7,7 +7,7 @@
   export  default {
     data() {
       return{
-        text: '引接数据查看工具'
+        text: '微服务管理应用'
       }
     }
   }
