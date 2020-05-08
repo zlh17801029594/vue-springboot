@@ -53,36 +53,45 @@
         </el-table-column>
         <el-table-column label="操作" width="350">
           <template slot-scope="scope">
-            <el-button
-              type="primary"
-              icon="el-icon-edit"
-              size="small"
-              @click="editSensitive(scope.row)"
-            ></el-button>
-            <el-button
-              v-show="commonShow(0, scope.row)"
-              type="primary"
-              size="small"
-              @click="commonAction(0, scope.row)"
-            >{{ action.join }}</el-button>
-            <el-button
-              v-show="commonShow(1, scope.row)"
-              type="success"
-              size="small"
-              @click="commonAction(1, scope.row)"
-            >{{ action.on }}</el-button>
-            <el-button
-              v-show="commonShow(2, scope.row)"
-              type="warning"
-              size="small"
-              @click="commonAction(2, scope.row)"
-            >{{ action.off }}</el-button>
-            <el-button
-              v-show="commonShow(-1, scope.row)"
-              type="danger"
-              size="small"
-              @click="commonAction(-1, scope.row)"
-            >{{ action.remove }}</el-button>
+            <el-row>
+              <el-popover
+                placement="right"
+                width="300"
+                trigger="click"
+                v-model="scope.row.showPopover">
+                <el-input-number v-model="num" controls-position="right" :min="0" :max="999"></el-input-number>
+                <el-button type="primary" size="samll" @click="editSensitive(scope.row)">确认</el-button>
+                <el-button
+                  size="small"
+                  slot="reference"
+                  @click="numShow(scope.row)"
+                >修改</el-button>
+              </el-popover>
+              <el-button
+                v-if="commonShow(0, scope.row)"
+                type="primary"
+                size="small"
+                @click="commonAction(0, scope.row)"
+              >{{ action.join }}</el-button>
+              <el-button
+                v-if="commonShow(1, scope.row)"
+                type="success"
+                size="small"
+                @click="commonAction(1, scope.row)"
+              >{{ action.on }}</el-button>
+              <el-button
+                v-if="commonShow(2, scope.row)"
+                type="warning"
+                size="small"
+                @click="commonAction(2, scope.row)"
+              >{{ action.off }}</el-button>
+              <el-button
+                v-if="commonShow(-1, scope.row)"
+                type="danger"
+                size="small"
+                @click="commonAction(-1, scope.row)"
+              >{{ action.remove }}</el-button>
+            </el-row>
           </template>
         </el-table-column>
       </el-table>
@@ -95,7 +104,7 @@
           <el-button v-show="dialogBuSh(1)" type="success" size="small" @click="submit(1)">{{ action.on }}</el-button>
           <el-button v-show="dialogBuSh(2)" type="warning" size="small" @click="submit(2)">{{ action.off }}</el-button>
         </span>
-        <apiInfo :api="api" v-show="showInfo" />
+        <apiInfo :apiId="apiId" v-show="showInfo" />
       </el-dialog>
     </el-main>
   </el-container>
@@ -144,21 +153,34 @@ export default {
         off: '停用',
         remove: '移除'
       },
-      api: {}
+      apiId: 0,
+      num: 0
     }
   },
   inject: ['reload'],
   computed: {
     colorStatus() {
       return {
-        red: this.status.disabled,
-        gray: this.status.join,
+        gray: this.status.disabled,
+        blue: this.status.join,
         orange: this.status.off,
         green: this.status.on
       }
     }
   },
   methods: {
+    numShow(row){
+      if(row.children){
+        let sensitiveNum = 0
+        row.children.forEach(e => {
+          if(e.sensitiveNum > sensitiveNum)
+            sensitiveNum = e.sensitiveNum
+        })
+        this.num = sensitiveNum
+      }else{
+        this.num = row.sensitiveNum
+      }
+    },
     updateService(){
       this.$prompt(
         '网关地址',
@@ -179,35 +201,31 @@ export default {
       })
     },
     editSensitive(row) {
-      this.$prompt(
-        '输入敏感值',
-        '提示',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消'
-        }
-      ).then(({ value }) => {
-        const ids = []
+      const ids = []
+      if (row.children) {
+        row.children.forEach(item => {
+          ids.push(item.id)
+        })
+      } else {
+        ids.push(row.id)
+      }
+      sensitiveService(this.num, ids).then(_ => {
+        this.$message({
+          type: 'success',
+          message: '操作成功'
+        })
         if (row.children) {
           row.children.forEach(item => {
-            item.sensitiveNum = value
-            ids.push(item.id)
+            item.sensitiveNum = this.num
           })
         } else {
-          row.sensitiveNum = value
-          ids.push(row.id)
+          row.sensitiveNum = this.num      
         }
-        sensitiveService(value, ids).then(_ => {
-          this.$message({
-            type: 'success',
-            message: '操作成功'
-          })
-        })
-        .catch(res => {
-                  if(res.code === 450)
-                    this.reload()
-                })
-        
+        row.showPopover = false
+      })
+      .catch(res => {
+        if(res.code === 450)
+          this.reload()
       })
     },
     commonAction(status, row) {
@@ -590,7 +608,7 @@ export default {
         return
       }
       this.dialog = true
-      this.api = row
+      this.apiId = row.id
       this.showTree = false
       this.showInfo = true
     }
@@ -598,7 +616,14 @@ export default {
   created() {
     getAllService().then(response => {
       this.tableData = response.data
-      console.log(this.data)
+      this.tableData.forEach(item => {
+        this.$set(item, 'showPopover', false)
+        if(item.children){
+          item.children.forEach(item1 => {
+            this.$set(item1, 'showPopover', false)
+          })
+        }
+      })
     })
   }
 }

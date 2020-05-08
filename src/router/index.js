@@ -516,6 +516,16 @@ export const asyncRoutes = [
       }
     ]
   },
+  {
+    path: 'back',
+    component: Layout,
+    children: [
+      {
+        path: 'http://192.168.204.67:8085',
+        meta: { title: '返回门户', icon: 'link' }
+      }
+    ]
+  },
 
   // 404 page must be placed at the end !!!
   // { path: '*', redirect: '/404', hidden: true }

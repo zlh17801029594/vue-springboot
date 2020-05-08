@@ -6,7 +6,6 @@
         <h1 v-else class="sidebar-title">{{ title }} </h1>
       </router-link>
       <router-link v-else key="expand" class="sidebar-logo-link" to="/">
-        <img v-if="logo" :src="logo" class="sidebar-logo">
         <h1 class="sidebar-title">{{ title }} </h1>
       </router-link>
     </transition>
@@ -24,7 +23,7 @@ export default {
   },
   data() {
     return {
-      title: 'Vue Element Admin',
+      title: '微服务管理系统',
       logo: 'https://wpimg.wallstcn.com/69a1c46c-eb1c-4b46-8bd4-e9e686ef5251.png'
     }
   }
@@ -47,19 +46,21 @@ export default {
   height: 50px;
   line-height: 50px;
   background: #2b2f3a;
-  text-align: center;
+  // text-align: center;
   overflow: hidden;
 
   & .sidebar-logo-link {
     height: 100%;
     width: 100%;
+    padding: 0 20px;
 
-    & .sidebar-logo {
-      width: 32px;
-      height: 32px;
-      vertical-align: middle;
-      margin-right: 12px;
-    }
+
+    // & .sidebar-logo {
+    //   width: 32px;
+    //   height: 32px;
+    //   vertical-align: middle;
+    //   margin-right: 12px;
+    // }
 
     & .sidebar-title {
       display: inline-block;

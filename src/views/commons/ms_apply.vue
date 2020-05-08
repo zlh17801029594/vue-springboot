@@ -43,7 +43,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="reason" label="失效原因" />
-      <el-table-column fixed="right" label="操作" width="300">
+      <el-table-column v-if="hasPerm()" fixed="right" label="操作" width="300">
         <template slot-scope="scope">
           <el-button
             v-if="commonShow(scope.row, 0)"
@@ -61,7 +61,7 @@
       </el-table-column>
     </el-table>
     <el-dialog ref="dialog" :visible.sync="dialog" :before-close="closeDialog" :center="true">
-      <apiInfo :api="api" v-show="showInfo" />
+      <apiInfo :apiId="apiId" v-show="showInfo" />
     </el-dialog>
   </div>
 </template>
@@ -71,6 +71,7 @@ import apiInfo from './api-info-view'
 import {getUserApi} from '@/api/ms_user_api'
 import {getAllService, updateService} from '@/api/ms_api'
 import {getAllApply, passApply, denyApply} from '@/api/ms_apply'
+import { mapGetters } from 'vuex'
 export default {
   components: {
     tree,
@@ -115,12 +116,14 @@ export default {
         deny: '拒绝'
       },
       text: '',
-      api: {}
+      apiId: 0
     }
   },
   inject: ['reload'],
   computed: {
-    
+    ...mapGetters([
+      'roles'
+    ])
   },
   created() {
     getAllApply().then(response => {
@@ -130,6 +133,11 @@ export default {
   mounted() {
   },
   methods: {
+    hasPerm(){
+      return this.roles.some(item => {
+        return ['ADMIN', 'SUPER_ADMIN'].indexOf(item) !== -1
+      })
+    },
     commonAction(row, status) {
       let idStatus = []
       if (row.children) {
@@ -274,7 +282,7 @@ export default {
     },
     info(row) {
       this.dialog = true
-      this.api = row
+      this.apiId = row.id
       this.showTree = false
       this.showInfo = true
     }

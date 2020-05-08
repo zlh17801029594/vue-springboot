@@ -15,6 +15,13 @@ export function getAllService() {
     })
 }
 
+export function getServiceDetails(id) {
+    return request({
+        url: `/api/${id}`,
+        method: 'get'
+    })
+}
+
 export function getService() {
     return request({
         url: '/api',

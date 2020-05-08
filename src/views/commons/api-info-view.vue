@@ -51,19 +51,33 @@
   </el-form>
 </template>
 <script>
+import {getServiceDetails} from '@/api/ms_api'
 export default {
   name: "apiInfo",
   props: {
-    api: {
-      type: Object
+    apiId: {
+      type: Number
     }
   },
   data() {
     return {
-      
+      api: {}
     };
   },
+  watch: {
+    apiId(){
+      this.serviceDetails()
+    }
+  },
+  created(){
+    this.serviceDetails()
+  },
   methods: {
+    serviceDetails(){
+      getServiceDetails(this.apiId).then(response => {
+        this.api = response.data
+      })
+    },
     booleanFormat(row, col, cellValue) {
       let value = "";
       if (cellValue) {

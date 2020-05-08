@@ -67,7 +67,7 @@
             size="small"
             @click="commonAction(scope.row, 2)"
           >{{ action.off }}</el-button>
-          <span v-if="textShow(scope.row)">{{text}}</span>
+          <span v-if="textShow(scope.row)">{{text(scope.row)}}</span>
         </template>
       </el-table-column>
     </el-table>
@@ -75,10 +75,11 @@
       <tree v-show="showTree" ref="tree" :filter-arr="filterArr" :checkbox="checkbox" :status="colorStatus"/>
       <span v-show="showTree" slot="footer">
         <el-button size="small" @click="dialog=false">取消</el-button>
+        <el-button v-show="dialogBuSh(-1)" type="danger" size="small" @click="submit(-1)">{{ action.remove }}</el-button>
         <el-button v-show="dialogBuSh(1)" type="success" size="small" @click="submit(1)">{{ action.on }}</el-button>
         <el-button v-show="dialogBuSh(2)" type="warning" size="small" @click="submit(2)">{{ action.off }}</el-button>
       </span>
-      <apiInfo :api="api" v-show="showInfo" />
+      <apiInfo :apiId="apiId" v-show="showInfo" />
     </el-dialog>
   </div>
 </template>
@@ -124,15 +125,15 @@ export default {
         on: '启用',
         off: '停用',
       },
-      text: '',
-      api: {}
+      apiId: 0
     }
   },
   inject: ['reload'],
   computed: {
     colorStatus() {
       return {
-        red: this.status.expire,
+        red: this.status.disabled,
+        gray: this.status.expire,
         orange: this.status.off,
         green: this.status.on
       }
@@ -149,18 +150,19 @@ export default {
     textShow(row){
       if(row.children || row.apiStatus === 2 || row.status === -1){
         return false
-      }else{
-        if(row.apiStatus === 1)
-          this.text = '接口已停用'
-        else if(row.apiStatus === 0)
-          this.text = '接口待接入'
-        else if(row.apiStatus === -1)
-          this.text = '接口未生效'
-        else if(row.apiStatus === 3)
-          this.text = '用户敏感级别不足'
       }
       return true
-      
+    },
+    text(row){
+      if(row.apiStatus === 1){
+        return '接口已停用'
+      } else if(row.apiStatus === 0){
+        return '接口待接入'
+      } else if(row.apiStatus === -1){
+        return '接口未生效'
+      } else if(row.apiStatus === 3){
+        return '用户敏感级别不足'
+      }
     },
     commonAction(row, status) {
       let idStatus = []
@@ -168,12 +170,15 @@ export default {
         let childrenArr = row.children
         if (typeof status !== 'undefined') {
           childrenArr = childrenArr.filter(e => {
-            if(e.apiStatus === 2 || status === -1)
+            if(e.apiStatus === 2 || e.status === -1)
               return e.status === status
           })
         }
         idStatus = childrenArr.map(e => {
-          return { id: e.apiId, ownerId: e.id, status: e.status }
+          if(e.apiStatus === 2 || e.status === -1)
+            return { id: e.apiId, ownerId: e.id, status: e.status }
+          else
+            return { id: e.apiId, ownerId: e.id, status: this.status.disabled.code }
         })
       } else {
         // 单条数据不展示树结构
@@ -255,10 +260,8 @@ export default {
               })
               .catch(_ => {})
           }
-          return
-        } else {
-          idStatus = [{ id: row.apiId, ownerId: row.id, status: row.status }]
         }
+        return
       }
       if (typeof status !== 'undefined') {
         this.checkbox = true
@@ -348,6 +351,19 @@ export default {
         })
       }
     },
+    removeItem(arr, fn) {
+      return arr.some(item => {
+        if (item.children) {
+          return this.removeItem(item.children, fn)
+        } else {
+          if (fn(item)) {
+            const i = arr.indexOf(item)
+            arr.splice(i, 1)
+            return true
+          }
+        }
+      })
+    },
     filterStatus(value, row) {
       if (row.children) {
         return row.children.some(e => {
@@ -409,18 +425,24 @@ export default {
         let b = 0
         let c = 0
         let d = 0
+        let x = 0
         arr.forEach(element => {
-          if (element.status === this.status.on.code) {
-            b++
-          } else if (element.status === this.status.off.code) {
-            c++
-          } else if (element.status === this.status.expire.code) {
-            d++
+          if (element.apiStatus !== 2 && element.status !== this.status.expire.code){
+            x++
+          }else{
+            if (element.status === this.status.on.code) {
+              b++
+            } else if (element.status === this.status.off.code) {
+              c++
+            } else if (element.status === this.status.expire.code) {
+              d++
+            }
           }
         })
         return this.status.on.message + b + '、' +
                 this.status.off.message + c + '、' +
-                this.status.expire.message + d
+                this.status.expire.message + d + '、' +
+                this.status.disabled.message + x
       } else {
         if (row.apiStatus !== 2 && row.status !== this.status.expire.code){
           return this.status.disabled.message
@@ -462,7 +484,7 @@ export default {
     },
     info(row) {
       this.dialog = true
-      this.api = row.apiId
+      this.apiId = row.apiId
       this.showTree = false
       this.showInfo = true
     }

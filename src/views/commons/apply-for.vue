@@ -1,47 +1,102 @@
 <template>
   <el-container>
     <el-header align="left">
-      <span>
-        <el-button type="primary" size="small" @click="click1">申请接口</el-button>
-        <span style="font-size: 14px;">提示：
-          <span :style="{color: setColor(-1)}">蓝色</span>:待审批、
-          <span :style="{color: setColor(2)}">绿色</span>:已获取(启用状态)、
-          <span :style="{color: setColor(1)}">橙色</span>:已获取(停用状态)
-        </span>
-      </span>
+      <el-row>
+        <el-col :span="3"><el-button type="primary" size="small" @click="click1" :disabled="isSelected">申请接口</el-button></el-col>
+        <el-col :span="21">
+          <span style="font-size: 14px;">提示：
+            <span :style="{color: setColor(0)}">蓝色</span>:待审批、
+            <span :style="{color: setColor(2)}">绿色</span>:已获取(启用状态)、
+            <span :style="{color: setColor(1)}">橙色</span>:已获取(停用状态)
+          </span>
+        </el-col>
+      </el-row>
     </el-header>
     <el-container>
-        <el-aside ref="left">
+        <el-aside ref="left" style="width: 400px">
+          <div class="tree-container">
             <el-tree
+            class="tree"
+            :indent="0"
             ref="tree"
             :data="treeData"
-            show-checkbox
+            :show-checkbox="hasPerm()"
             default-expand-all
             node-key="id"
             highlight-current
             :expand-on-click-node="false"
             @node-click="clickNode"
+            @check="selectedChange"
             :props="defaultProps">
             <span class="custom-tree-node" slot-scope="{node, data}">
-                <span>{{ node.label }}</span>
+                <span :style="{color: setColor(data.userApiStatus)}">{{ node.label }}</span>
                 <span>
                 
                 </span>
             </span>
             </el-tree>
+          </div>
         </el-aside>
         <el-main ref="right">
-          <el-scrollbar style="height:100%">
             <el-collapse v-for="(service, index) in data" :key="index" v-model="activeNames" @change="handleChange" accordion>
                 <el-collapse-item :title="titleFormat([service.label, service.basePath])" :name="service.id">
                   <el-collapse v-for="(api, index) in service.children" :key="index" v-model="activeNames1" accordion style="padding-left: 20px">
                     <el-collapse-item :title="titleFormat([api.label, api.url])" :name="api.id">
-                      <apiInfo :api="api" />
+                      <!-- <apiInfo :api="api" /> -->
+                      <el-form label-position="left" inline class="demo-table-expand">
+                        <el-form-item label="接口描述">
+                          <span>{{ api.label }}</span>
+                        </el-form-item>
+                        <el-form-item label="接口uri">
+                          <span>{{ api.uri }}</span>
+                        </el-form-item>
+                        <el-form-item label="请求方法">
+                          <span>{{ api.method }}</span>
+                        </el-form-item>
+                        <el-form-item label="请求参数">
+                          <span>
+                            <el-table :data="api.otherInfo.parameters" stripe border style="width: 100%;">
+                              <el-table-column label="参数名" prop="name"></el-table-column>
+                              <el-table-column label="参数位置" prop="in"></el-table-column>
+                              <el-table-column label="参数描述" prop="description"></el-table-column>
+                              <el-table-column label="是否必须" prop="required" :formatter="booleanFormat"></el-table-column>
+                              <el-table-column label="参数类型" prop="type"></el-table-column>
+                              <el-table-column label="是否可以为空白字符串" prop="allowEmptyValue" :formatter="booleanFormat"></el-table-column>
+                              <el-table-column label="参数样例" prop="example"></el-table-column>
+                            </el-table>
+                          </span>
+                        </el-form-item>
+                        <el-form-item label="返回结果样例">
+                          <pre v-html="syntaxHighlight(api.otherInfo.result)"></pre>
+                          <!--<pre>{{ api.result}}</pre>-->
+                          <!--<span>{{ api.result}}</span>-->
+                          <!--:span布局-->
+                          <!--<span>
+                              <div  v-for="person in test" style="width: 100%;">
+                              <el-row>
+                                  <el-col :span="8">{{person.name}}</el-col>
+                                  <el-col :span="8">{{person.age}}</el-col>
+                              </el-row>
+                              </div>
+                          </span>-->
+                        </el-form-item>
+                        <el-form-item label="接收参数方式">
+                          <span>{{ api.otherInfo.consumes }}</span>
+                        </el-form-item>
+                        <el-form-item label="返回结果方式">
+                          <span>{{ api.otherInfo.produces }}</span>
+                        </el-form-item>
+                        <el-form-item label="响应码">
+                          <el-table :data="api.otherInfo.responses" stripe border style="width: 100%;">
+                            <el-table-column label="响应码" prop="code"></el-table-column>
+                            <el-table-column label="描述" prop="description"></el-table-column>
+                          </el-table>
+                        </el-form-item>
+                      </el-form>
                     </el-collapse-item>
                   </el-collapse>
                 </el-collapse-item>
             </el-collapse>
-          </el-scrollbar>
         </el-main>
     </el-container>
     <el-dialog
@@ -60,12 +115,12 @@
 </template>
 
 <script>
-import BScroll from 'better-scroll'
 import info from './apply-for-info'
 import apiInfo from './api-info-view'
 
 import {getService} from '@/api/ms_api'
 import {createApply} from '@/api/ms_apply'
+import { mapGetters } from 'vuex'
 
 export default {
     components: {
@@ -82,15 +137,25 @@ export default {
         },
         dialog: false,
         selected: [],
+        isSelected: true,
         id: 0
       }
     },
+    inject: ['reload'],
     computed: {
       treeData(){
         return this.filterProp(this.data)
-      }
+      },
+      ...mapGetters([
+      'roles'
+      ])
     },
     methods: {
+      hasPerm(){
+      return !this.roles.some(item => {
+          return ['ADMIN', 'SUPER_ADMIN'].indexOf(item) !== -1
+        })
+      },
       filterProp(data){
         if(data instanceof Array){
           return data.map(item => {
@@ -109,11 +174,20 @@ export default {
               id: data.id,
               label: data.label,
               // 真实环境通过用户关系表查询
-              status: data.id === 1 ? -1 : 0,
+              userApiStatus: data.userApiStatus,
               // 真实数据改成status判断
-              disabled: data.id === 1
+              disabled: typeof data.userApiStatus !== 'undefined' 
             }
           }
+        }
+      },
+      selectedChange(){
+        const selectNodeIds = this.$refs.tree.getCheckedKeys(true)
+        console.log(selectNodeIds)
+        if(selectNodeIds && selectNodeIds.length){
+          this.isSelected = false
+        }else{
+          this.isSelected = true
         }
       },
       click1(){
@@ -127,14 +201,51 @@ export default {
       applyApi(){
         const msUserApis = this.$refs.info.getApply()
         console.log(msUserApis)
-        createApply(msUserApis).then(response => {
-          console.log(response)
-          this.$message({
-              type: 'success',
-              message: '操作成功'
+        if(msUserApis){
+          const ids = msUserApis.ids
+          const dataNodes = []
+          if (ids && ids.length) {
+            this.findItems(
+              this.treeData,
+              item => {
+                return ids.indexOf(item.id) !== -1
+              },
+              dataNodes
+            )
+            createApply(msUserApis).then(response => {
+              console.log(response)
+              this.$message({
+                  type: 'success',
+                  message: '操作成功'
+                })
+              dataNodes.forEach(e => {
+                e.userApiStatus = 0
+                e.disabled = true
+              })
+              this.$refs.tree.setCheckedKeys([])
+              this.dialog = false
             })
+            .catch(res => {
+                      if(res.code === 450)
+                        this.reload()
+                    })
+          } else {
+            console.log(ids)
+            // this.$alert('不能为空！')
+            return
+          }
+        }
+      },
+      findItems(arr, fn, dataNodes) {
+        arr.forEach(item => {
+          if (item.children) {
+            this.findItems(item.children, fn, dataNodes)
+          } else {
+            if (fn(item)) {
+              dataNodes.push(item)
+            }
+          }
         })
-        this.dialog = false
       },
       closeDialog(done){
         done()
@@ -196,23 +307,15 @@ export default {
           return '<span class="' + cls + '">' + match + '</span>';
         });
       },
-      _initScroll(){
-          this.left = new BScroll((this.$refs.left), {
-              click: true
-          })
-          this.right = new BScroll((this.$refs.right), {
-              click: true
-          })
-      },
       setColor(status) {
         if (status === 0) {
-          return '#909399'
+          return '#409EFF'
         } else if (status === 1) {
           return '#E6A23C'
         } else if (status === 2) {
           return '#67C23A'
         } else if (status === -1) {
-          return '#409EFF'
+          return '#909399'
         }
       },
       setId(data){
@@ -240,14 +343,52 @@ export default {
 }
 </script>
 <style>
-  /* .custom-tree-node {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 14px;
-    padding-right: 8px;
-  } */
+  .tree /deep/ .el-tree-node {
+    position: relative;
+    padding-left: 16px;
+  }
+  .tree /deep/ .el-tree-node__children {
+    padding-left: 16px;
+  }
+  .tree /deep/ .el-tree-node :last-child:before {
+    height: 38px;
+  }
+  .tree /deep/ .el-tree > .el-tree-node:before {
+    border-left: none;
+  }
+  .tree-container /deep/ .el-tree > .el-tree-node:after {
+    border-top: none;
+  }
+  .tree-container /deep/ .el-tree > .el-tree-node:before {
+    border-left: none;
+  }
+  .tree /deep/ .el-tree-node:before {
+    content: "";
+    left: -4px;
+    position: absolute;
+    right: auto;
+    border-width: 1px;
+  }
+  .tree /deep/ .el-tree-node:after {
+    content: "";
+    left: -4px;
+    position: absolute;
+    right: auto;
+    border-width: 1px;
+  }
+  .tree /deep/ .el-tree-node:before {
+    border-left: 1px dashed #4386c6;
+    bottom: 0px;
+    height: 100%;
+    top: -26px;
+    width: 20px;
+  }
+  .tree /deep/ .el-tree-node:after {
+    border-top: 1px dashed #4386c6;
+    height: 20px;
+    top: 12px;
+    width: 24px;
+  }
   
   /*pre {outline: 1px solid #ccc; }*/
   .string { color: green; }
@@ -269,7 +410,4 @@ export default {
   /* .el-header{
       padding-top: 10px
   } */
-  .el-scrollbar__wrap {
-    overflow-x: hidden;
-  }
 </style>

@@ -2,8 +2,8 @@
   <el-container>
     <el-header>
       <p>提示：
-        <span v-if="status.gray">
-          <span :style="{color: setColor(status.gray.code)}">灰色</span>:{{ status.gray.message }}、
+        <span v-if="status.blue">
+          <span :style="{color: setColor(status.blue.code)}">蓝色</span>:{{ status.blue.message }}、
         </span>
         <span v-if="status.green">
           <span :style="{color: setColor(status.green.code)}">绿色</span>:{{ status.green.message }}、
@@ -11,26 +11,33 @@
         <span v-if="status.orange">
           <span :style="{color: setColor(status.orange.code)}">橙色</span>:{{ status.orange.message }}、
         </span>
+        <span v-if="status.gray">
+          <span :style="{color: setColor(status.gray.code)}">灰色</span>:{{ status.gray.message }}、
+        </span>
         <span v-if="status.red">
           <span :style="{color: setColor(status.red.code)}">红色</span>:{{ status.red.message }}
         </span>
       </p>
     </el-header>
     <el-main>
-      <el-tree
-        ref="tree"
-        :data="treeData"
-        :show-checkbox="checkbox"
-        node-key="id"
-        highlight-current
-        default-expand-all
-        :expand-on-click-node="true"
-      >
-        <span slot-scope="{node, data}" class="custom-tree-node">
-          <span :style="{color: setColor(data.status)}">{{ node.label }}</span>
-          <span />
-        </span>
-      </el-tree>
+      <div class="tree-container">
+        <el-tree
+          ref="tree"
+          class="tree"
+          :indent="0"
+          :data="treeData"
+          :show-checkbox="checkbox"
+          node-key="id"
+          highlight-current
+          default-expand-all
+          :expand-on-click-node="true"
+        >
+          <span slot-scope="{node, data}" class="custom-tree-node">
+            <span :style="{color: setColor(data.status)}">{{ node.label }}</span>
+            <span />
+          </span>
+        </el-tree>
+      </div>
     </el-main>
   </el-container>
 </template>
@@ -206,12 +213,14 @@ export default {
     },
     setColor(status) {
       if (status === 0) {
-        return '#909399'
+        return '#409EFF'
       } else if (status === 1) {
         return '#E6A23C'
       } else if (status === 2) {
         return '#67C23A'
       } else if (status === -1) {
+        return '#909399'
+      } else if (status === -2) {
         return '#F56C6C'
       }
     }
@@ -219,16 +228,50 @@ export default {
 }
 </script>
 <style>
-    .custom-tree-node {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 14px;
-        padding-right: 8px;
-    }
-    .el-header {
-      height: 20px;
-      line-height: 20px;
-    }
+  .tree /deep/ .el-tree-node {
+    position: relative;
+    padding-left: 16px;
+  }
+  .tree /deep/ .el-tree-node__children {
+    padding-left: 16px;
+  }
+  .tree /deep/ .el-tree-node :last-child:before {
+    height: 38px;
+  }
+  .tree /deep/ .el-tree > .el-tree-node:before {
+    border-left: none;
+  }
+  .tree-container /deep/ .el-tree > .el-tree-node:after {
+    border-top: none;
+  }
+  .tree-container /deep/ .el-tree > .el-tree-node:before {
+    border-left: none;
+  }
+  .tree /deep/ .el-tree-node:before {
+    content: "";
+    left: -4px;
+    position: absolute;
+    right: auto;
+    border-width: 1px;
+  }
+  .tree /deep/ .el-tree-node:after {
+    content: "";
+    left: -4px;
+    position: absolute;
+    right: auto;
+    border-width: 1px;
+  }
+  .tree /deep/ .el-tree-node:before {
+    border-left: 1px dashed #4386c6;
+    bottom: 0px;
+    height: 100%;
+    top: -26px;
+    width: 20px;
+  }
+  .tree /deep/ .el-tree-node:after {
+    border-top: 1px dashed #4386c6;
+    height: 20px;
+    top: 12px;
+    width: 24px;
+  }
 </style>
