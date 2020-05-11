@@ -22,6 +22,14 @@ export function getApply(){
     })
 }
 
+export function delApply(data){
+    return request({
+        url: '/apply/del',
+        method: 'post',
+        data
+    })
+}
+
 export function passApply(id){
     return request({
         url: `/apply/pass/${id}`,

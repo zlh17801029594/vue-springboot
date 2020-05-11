@@ -1,5 +1,5 @@
 <template>
-  <el-form label-position="left" inline class="demo-table-expand">
+  <el-form label-position="left" :model="api" inline class="demo-table-expand">
     <el-form-item label="接口描述">
       <span>{{ api.label }}</span>
     </el-form-item>
@@ -61,7 +61,18 @@ export default {
   },
   data() {
     return {
-      api: {}
+      api: {
+        label: '',
+        uri: '',
+        method: '',
+        otherInfo: {
+          parameters: undefined,
+          result: undefined,
+          consumes: undefined,
+          produces: undefined,
+          responses: undefined
+        }
+      }
     };
   },
   watch: {
@@ -88,31 +99,33 @@ export default {
       return value;
     },
     syntaxHighlight(json) {
-      if (typeof json != "string") {
-        json = JSON.stringify(json, undefined, 2);
-      }
-      json = json
-        .replace(/&/g, "&")
-        .replace(/</g, "<")
-        .replace(/>/g, ">");
-      return json.replace(
-        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-        function(match) {
-          let cls = "number";
-          if (/^"/.test(match)) {
-            if (/:$/.test(match)) {
-              cls = "key";
-            } else {
-              cls = "string";
-            }
-          } else if (/true|false/.test(match)) {
-            cls = "boolean";
-          } else if (/null/.test(match)) {
-            cls = "null";
-          }
-          return '<span class="' + cls + '">' + match + "</span>";
+      if(json){
+        if (typeof json != "string") {
+          json = JSON.stringify(json, undefined, 2);
         }
-      );
+        json = json
+          .replace(/&/g, "&")
+          .replace(/</g, "<")
+          .replace(/>/g, ">");
+        return json.replace(
+          /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+          function(match) {
+            let cls = "number";
+            if (/^"/.test(match)) {
+              if (/:$/.test(match)) {
+                cls = "key";
+              } else {
+                cls = "string";
+              }
+            } else if (/true|false/.test(match)) {
+              cls = "boolean";
+            } else if (/null/.test(match)) {
+              cls = "null";
+            }
+            return '<span class="' + cls + '">' + match + "</span>";
+          }
+        );
+      }
     }
   }
 };

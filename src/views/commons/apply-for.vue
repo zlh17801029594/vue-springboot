@@ -101,9 +101,9 @@
     </el-container>
     <el-dialog
         :visible.sync="dialog"
-        :before-close="closeDialog"
         ref="dialog"
         :center="true"
+        title="接口申请"
         width="550px">
         <info ref="info" :data='treeData' :selected='selected' />
         <span slot="footer">
@@ -246,9 +246,6 @@ export default {
             }
           }
         })
-      },
-      closeDialog(done){
-        done()
       },
       clickNode (data, node, obj) {	
         if (node.level === 1) {

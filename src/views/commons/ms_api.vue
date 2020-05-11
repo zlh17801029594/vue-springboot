@@ -2,35 +2,41 @@
   <el-container>
     <el-header>
       <el-button type="primary" size="small" @click="updateService()">更新微服务信息</el-button>
-      <el-button v-show="lookShow" type="primary" size="small" @click="commonAction()">{{ action.look }}</el-button>
-      <el-button v-show="commonShow(0)" type="primary" size="small" @click="commonAction(0)">{{ action.join }}</el-button>
-      <el-button v-show="commonShow(1)" type="success" size="small" @click="commonAction(1)">{{ action.on }}</el-button>
-      <el-button v-show="commonShow(2)" type="warning" size="small" @click="commonAction(2)">{{ action.off }}</el-button>
-      <el-button v-show="commonShow(-1)" type="danger" size="small" @click="commonAction(-1)">{{ action.remove }}</el-button>
+      <el-button v-show="lookShow" type="primary" size="small" @click="commonAction()">{{ action.look.message }}</el-button>
+      <el-button v-show="commonShow(0)" type="primary" size="small" @click="commonAction(0)">{{ action.join.message }}</el-button>
+      <el-button v-show="commonShow(1)" type="success" size="small" @click="commonAction(1)">{{ action.on.message }}</el-button>
+      <el-button v-show="commonShow(2)" type="warning" size="small" @click="commonAction(2)">{{ action.off.message }}</el-button>
+      <el-button v-show="commonShow(-1)" type="danger" size="small" @click="commonAction(-1)">{{ action.remove.message }}</el-button>
     </el-header>
     <el-main>
       <el-table
         :data="tableData"
-        :span-method="arraySpanMethod"
         row-key="id"
+        :indent="0"
         border
         :row-class-name="tableRowClassName"
         style="width: 100%"
       >
-        <el-table-column type="index" :index="1" />
-        <el-table-column prop="label" label="名称" width="300" />
-        <el-table-column label="类型" width="80">
+        <!-- <el-table-column type="index" :index="1" /> -->
+        <!-- <el-table-column
+          type="selection"
+          width="55">
+        </el-table-column> -->
+        <el-table-column width="48" />
+        <el-table-column prop="label" label="微服务/接口名称" align="center" min-width="250" />
+        <el-table-column label="类型" align="center" min-width="80">
           <template slot-scope="scope">
             <el-tag>{{scope.row.children ? '微服务' : '接口'}}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="接口url">
+        <el-table-column label="接口url" align="center" min-width="200">
           <template slot-scope="scope">
             <span v-if="scope.row.children">{{ 'http://' + scope.row.host + scope.row.uri }}</span>
             <span v-else><el-button type="text" @click="info(scope.row)">{{ scope.row.uri }}</el-button></span>
           </template>
         </el-table-column>
-        <el-table-column prop="sensitiveNum" label="敏感级别" width="80" />
+        <el-table-column prop="method" label="请求方式" align="center" min-width="80" />
+        <el-table-column prop="sensitiveNum" label="敏感级别" align="center" min-width="80" />
         <el-table-column
           prop="status"
           label="状态"
@@ -40,7 +46,8 @@
                      , { text: status.disabled.message, value: status.disabled.code }]"
           :filter-method="filterStatus"
           filter-placement="bottom-end"
-          width="280"
+          align="center"
+          min-width="280"
         >
           <template slot-scope="scope">
             <span v-if="scope.row.children">{{show(scope.row)}}</span>
@@ -51,60 +58,66 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="350">
+        <el-table-column fixed="right" label="操作" align="center" width="360">
           <template slot-scope="scope">
             <el-row>
-              <el-popover
-                placement="right"
-                width="300"
-                trigger="click"
-                v-model="scope.row.showPopover">
-                <el-input-number v-model="num" controls-position="right" :min="0" :max="999"></el-input-number>
-                <el-button type="primary" size="samll" @click="editSensitive(scope.row)">确认</el-button>
-                <el-button
-                  size="small"
-                  slot="reference"
-                  @click="numShow(scope.row)"
-                >修改</el-button>
-              </el-popover>
+              <el-button
+                size="small"
+                @click="editAction(scope.row)"
+              >修改</el-button>
               <el-button
                 v-if="commonShow(0, scope.row)"
                 type="primary"
                 size="small"
                 @click="commonAction(0, scope.row)"
-              >{{ action.join }}</el-button>
+              >{{ action.join.message }}</el-button>
               <el-button
                 v-if="commonShow(1, scope.row)"
                 type="success"
                 size="small"
                 @click="commonAction(1, scope.row)"
-              >{{ action.on }}</el-button>
+              >{{ action.on.message }}</el-button>
               <el-button
                 v-if="commonShow(2, scope.row)"
                 type="warning"
                 size="small"
                 @click="commonAction(2, scope.row)"
-              >{{ action.off }}</el-button>
+              >{{ action.off.message }}</el-button>
               <el-button
                 v-if="commonShow(-1, scope.row)"
                 type="danger"
                 size="small"
                 @click="commonAction(-1, scope.row)"
-              >{{ action.remove }}</el-button>
+              >{{ action.remove.message }}</el-button>
             </el-row>
           </template>
         </el-table-column>
       </el-table>
-      <el-dialog ref="dialog" :visible.sync="dialog" :before-close="closeDialog" :center="true">
-        <tree v-show="showTree" ref="tree" :filter-arr="filterArr" :checkbox="checkbox" :status="colorStatus" :data="tableData" />
-        <span v-show="showTree" slot="footer">
+      <el-dialog ref="dialog" :visible.sync="dialog" :before-close="closeDialog" :center="true" width="500px">
+        <tree ref="tree" :filter-arr="filterArr" :checkbox="checkbox" :status="colorStatus" />
+        <span slot="footer">
           <el-button size="small" @click="dialog=false">取消</el-button>
-          <el-button v-show="dialogBuSh(-1)" type="danger" size="small" @click="submit(-1)">{{ action.remove }}</el-button>
-          <el-button v-show="dialogBuSh(0)" type="primary" size="small" @click="submit(0)">{{ action.join }}</el-button>
-          <el-button v-show="dialogBuSh(1)" type="success" size="small" @click="submit(1)">{{ action.on }}</el-button>
-          <el-button v-show="dialogBuSh(2)" type="warning" size="small" @click="submit(2)">{{ action.off }}</el-button>
+          <el-button v-show="dialogBuSh(-1)" type="danger" size="small" @click="submit(-1)">{{ action.remove.message }}</el-button>
+          <el-button v-show="dialogBuSh(0)" type="primary" size="small" @click="submit(0)">{{ action.join.message }}</el-button>
+          <el-button v-show="dialogBuSh(1)" type="success" size="small" @click="submit(1)">{{ action.on.message }}</el-button>
+          <el-button v-show="dialogBuSh(2)" type="warning" size="small" @click="submit(2)">{{ action.off.message }}</el-button>
         </span>
-        <apiInfo :apiId="apiId" v-show="showInfo" />
+      </el-dialog>
+
+      <el-dialog :visible.sync="dialog2" title="更新接口敏感级别" width="400px" >
+        <el-form :model="dialog2Form" ref="dialog2Form" label-width="120px" label-position="left">
+          <el-form-item label="敏感级别" >
+            <el-input-number v-model="dialog2Form.sensitiveNum" controls-position="right" :min="0" :max="999"></el-input-number>
+          </el-form-item>
+        </el-form>
+        <span slot="footer">
+          <el-button size="small" @click="dialog2=false">取消</el-button>
+          <el-button type="primary" size="samll" @click="editSensitive()">确认</el-button>
+        </span>
+      </el-dialog>
+
+      <el-dialog :visible.sync="dialog3" title="接口详情信息">
+        <apiInfo :apiId="apiId" />
       </el-dialog>
     </el-main>
   </el-container>
@@ -123,8 +136,7 @@ export default {
       tableData: [],
       filterArr: [],
       dialog: false,
-      showTree: false,
-      showInfo: false,
+      dialog3: false,
       viewStatus: 0,
       checkbox: true,
       status: {
@@ -146,15 +158,37 @@ export default {
         }
       },
       action: {
-        look: '查看',
-        edit: '编辑',
-        join: '接入',
-        on: '启用',
-        off: '停用',
-        remove: '移除'
+        look: {
+          code: 3,
+          message: '查看'
+        },
+        edit: {
+          code: 4,
+          message: '编辑'
+        },
+        join: {
+          code: 0,
+          message: '接入'
+        },
+        on: {
+          code: 2,
+          message: '启用'
+        },
+        off: {
+          code: 1,
+          message: '停用'
+        },
+        remove: {
+          code: -1,
+          message: '移除'
+        }
       },
       apiId: 0,
-      num: 0
+      dialog2: false,
+      dialog2Form: {
+        row: undefined,
+        sensitiveNum: 0
+      }
     }
   },
   inject: ['reload'],
@@ -169,18 +203,6 @@ export default {
     }
   },
   methods: {
-    numShow(row){
-      if(row.children){
-        let sensitiveNum = 0
-        row.children.forEach(e => {
-          if(e.sensitiveNum > sensitiveNum)
-            sensitiveNum = e.sensitiveNum
-        })
-        this.num = sensitiveNum
-      }else{
-        this.num = row.sensitiveNum
-      }
-    },
     updateService(){
       this.$prompt(
         '网关地址',
@@ -198,9 +220,27 @@ export default {
             message: '操作成功'
           })
         })
+      }).catch(() => {
+        
       })
     },
-    editSensitive(row) {
+    editAction(row) {
+      if(row.children){
+        let sensitiveNum = 0
+        row.children.forEach(e => {
+          if(e.sensitiveNum > sensitiveNum)
+            sensitiveNum = e.sensitiveNum
+        })
+        this.dialog2Form.sensitiveNum = sensitiveNum
+      }else{
+        this.dialog2Form.sensitiveNum = row.sensitiveNum
+      }
+      this.dialog2Form.row = row
+      this.dialog2 = true
+    },
+    editSensitive() {
+      const row = this.dialog2Form.row
+      const num = this.dialog2Form.sensitiveNum
       const ids = []
       if (row.children) {
         row.children.forEach(item => {
@@ -209,19 +249,19 @@ export default {
       } else {
         ids.push(row.id)
       }
-      sensitiveService(this.num, ids).then(_ => {
+      sensitiveService(num, ids).then(_ => {
         this.$message({
           type: 'success',
           message: '操作成功'
         })
         if (row.children) {
           row.children.forEach(item => {
-            item.sensitiveNum = this.num
+            item.sensitiveNum = num
           })
         } else {
-          row.sensitiveNum = this.num      
+          row.sensitiveNum = num      
         }
-        row.showPopover = false
+        this.dialog2 = false
       })
       .catch(res => {
         if(res.code === 450)
@@ -268,11 +308,10 @@ export default {
             dataNode
           )
           if (status === this.status.join.code) {
-            this.$confirm(this.action.join, '提示', {
+            this.$confirm('确认' + this.action.join.message, '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
-              type: 'info',
-              center: 'true'
+              type: 'info'
             })
               .then(_ => {
                 joinService([row.id]).then(_ => {
@@ -290,11 +329,10 @@ export default {
               .catch(action => {
               })
           } else if (status === this.status.on.code) {
-            this.$confirm(this.action.off, '提示', {
+            this.$confirm('确认' + this.action.off.message, '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
-              type: 'warning',
-              center: 'true'
+              type: 'warning'
             })
               .then(_ => {
                 offService([row.id]).then(_ => {
@@ -311,11 +349,10 @@ export default {
               })
               .catch(_ => {})
           } else if (status === this.status.off.code) {
-            this.$confirm(this.action.on, '提示', {
+            this.$confirm('确认' + this.action.on.message, '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
-              type: 'success',
-              center: 'true'
+              type: 'success'
             })
               .then(_ => {
                 onService([row.id]).then(_ => {
@@ -332,11 +369,10 @@ export default {
               })
               .catch(_ => {})
           } else if (status === this.status.disabled.code) {
-            this.$confirm(this.action.remove, '提示', {
+            this.$confirm('确认' + this.action.remove.message, '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
-              type: 'error',
-              center: 'true'
+              type: 'error'
             })
               .then(_ => {
                 delService([row.id]).then(_ => {
@@ -350,6 +386,22 @@ export default {
                       return item.id === row.id
                     }
                   )
+                  const parentNode = []
+                  this.findItems(
+                    this.tableData,
+                    item => {
+                      return item.id === dataNode[0].pid
+                    },
+                    parentNode
+                  )
+                  if(!parentNode[0].children.length){
+                    this.removeItem(
+                      this.tableData,
+                      item => {
+                        return item.id === parentNode[0].id
+                      }
+                    )
+                  }
                 })
                 .catch(res => {
                   if(res.code === 450)
@@ -371,8 +423,6 @@ export default {
       this.filterArr = idStatus
       this.viewStatus = status
       this.dialog = true
-      this.showTree = true
-      this.showInfo = false
     },
     submit(i) {
       const ids = this.$refs.tree.getIds()
@@ -441,6 +491,22 @@ export default {
                 }
               )
             })
+            const parentNode = []
+            this.findItems(
+              this.tableData,
+              item => {
+                return item.id === dataNodes[0].pid
+              },
+              parentNode
+            )
+            if(!parentNode[0].children.length){
+              this.removeItem(
+                this.tableData,
+                item => {
+                  return item.id === parentNode[0].id
+                }
+              )
+            }
           })
           .catch(res => {
                   if(res.code === 450)
@@ -456,6 +522,9 @@ export default {
     findItems(arr, fn, dataNodes) {
       arr.forEach(item => {
         if (item.children) {
+          if (fn(item)) {
+            dataNodes.push(item)
+          }
           this.findItems(item.children, fn, dataNodes)
         } else {
           if (fn(item)) {
@@ -478,7 +547,13 @@ export default {
     removeItem(arr, fn) {
       return arr.some(item => {
         if (item.children) {
-          return this.removeItem(item.children, fn)
+          if (fn(item)) {
+            const i = arr.indexOf(item)
+            arr.splice(i, 1)
+            return true
+          }else{
+            return this.removeItem(item.children, fn)
+          }
         } else {
           if (fn(item)) {
             const i = arr.indexOf(item)
@@ -499,15 +574,6 @@ export default {
         }
       }
       return false
-    },
-    arraySpanMethod({ row, column, rowIndex, columnIndex }) {
-      if (row.children) {
-        if (column.label === '接口url') {
-          return [1, 2]
-        } else if (column.label === '敏感级别') {
-          return [0, 0]
-        }
-      }
     },
     closeDialog(done) {
       done()
@@ -607,23 +673,14 @@ export default {
       if(row.children){
         return
       }
-      this.dialog = true
+      this.dialog3 = true
       this.apiId = row.id
-      this.showTree = false
-      this.showInfo = true
     }
   },
   created() {
     getAllService().then(response => {
       this.tableData = response.data
-      this.tableData.forEach(item => {
-        this.$set(item, 'showPopover', false)
-        if(item.children){
-          item.children.forEach(item1 => {
-            this.$set(item1, 'showPopover', false)
-          })
-        }
-      })
+      console.log(this.tableData)
     })
   }
 }

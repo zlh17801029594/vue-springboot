@@ -41,7 +41,24 @@ export default {
         //     return this.selected
         // }
     },
+    watch: {
+        selected(){
+            this.showApply()
+        }
+    },
+    created(){
+        this.showApply()
+    },
     methods:{
+        showApply(){
+            this.applyForm = {
+                ids: this.selected,
+                datetime: ''
+            }
+            this.$nextTick(() => {
+                this.$refs.applyForm.clearValidate()
+            })
+        },
         change(){
             console.log(this.selectedIds)
             console.log(this.$refs.cascader.getCheckedNodes(true))
@@ -126,7 +143,7 @@ export default {
             },
             selectedIds: this.selected,
             applyForm: {
-                ids: this.selected,
+                ids: [],
                 datetime: ''
             },
             applyRules: {

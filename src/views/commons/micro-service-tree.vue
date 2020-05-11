@@ -1,7 +1,7 @@
 <template>
   <el-container>
     <el-header>
-      <p>提示：
+      <el-row>提示：
         <span v-if="status.blue">
           <span :style="{color: setColor(status.blue.code)}">蓝色</span>:{{ status.blue.message }}、
         </span>
@@ -17,7 +17,7 @@
         <span v-if="status.red">
           <span :style="{color: setColor(status.red.code)}">红色</span>:{{ status.red.message }}
         </span>
-      </p>
+      </el-row>
     </el-header>
     <el-main>
       <div class="tree-container">
@@ -228,6 +228,9 @@ export default {
 }
 </script>
 <style>
+  .el-header {
+    line-height: 60px;
+  }
   .tree /deep/ .el-tree-node {
     position: relative;
     padding-left: 16px;

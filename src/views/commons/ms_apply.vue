@@ -2,29 +2,53 @@
   <div class="app-container">
     <el-table
       :data="tableData"
-      :span-method="arraySpanMethod"
       row-key="id"
-      :row-class-name="tableRowClassName"
       border
       style="width: 100%"
     >
-      <el-table-column type="index" :index="1" />      
-      <el-table-column prop="label" label="名称" />
-      <el-table-column label="类型" width="80">
-          <template slot-scope="scope">
-            <el-tag>{{scope.row.children ? '申请' : '接口'}}</el-tag>
-          </template>
-        </el-table-column>
-      <el-table-column label="接口url">
-        <template slot-scope="scope">
-          <el-button type="text" @click="info(scope.row)">{{ scope.row.uri }}</el-button>
+      <el-table-column type="index" :index="1" />
+      <el-table-column type="expand">
+        <template slot-scope="props">
+          <!-- <div>
+            <span>雨纷纷</span>
+            <el-divider direction="vertical"></el-divider>
+            <span>旧故里</span>
+            <el-divider direction="vertical"></el-divider>
+            <span>草木深</span>
+            <el-divider></el-divider>
+            <span>
+              <span>雨纷纷</span>
+              <el-divider direction="vertical"></el-divider>
+              <span>旧故里</span>
+              <el-divider direction="vertical"></el-divider>
+              <span>草木深</span>
+            </span>
+          </div> -->
+          <el-table
+            :data="props.row.msApiDtos"
+            :show-header="false"
+            border
+            style="width: 100%">
+            <el-table-column type="index" :index="1" />
+            <el-table-column
+              prop="label"
+              label="接口名">
+            </el-table-column>
+            <el-table-column label="接口url">
+              <template slot-scope="scope">
+                <el-button type="text" @click="info(scope.row)">{{ scope.row.uri }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </template>
       </el-table-column>
-      <el-table-column prop="applyTime" label="申请时间" />
-      <el-table-column prop="expireTime" label="到期时间" />
+      <el-table-column prop="applyTime" label="申请时间" align="center" min-width="200" />
+      <el-table-column prop="expireTime" label="到期时间" align="center" min-width="200" />   
+      <el-table-column prop="label" label="申请用户" align="center" min-width="100" />
       <el-table-column
         prop="status"
         label="状态"
+        align="center"
         :filters="[{ text: status.disabled.message, value: status.disabled.code }
                    , { text: status.expire.message, value: status.expire.code }
                    , { text: status.approve.message, value: status.approve.code }
@@ -32,36 +56,33 @@
                    , { text: status.pass.message, value: status.pass.code }]"
         :filter-method="filterStatus"
         filter-placement="bottom-end"
-        width="280"
+        min-width="100"
       >
         <template slot-scope="scope">
-            <span v-if="scope.row.children">
-              <el-tag
-                :type="tag_type(scope.row)"
-                effect="dark">{{show(scope.row)}}</el-tag>
-            </span>
+          <el-tag
+            :type="tag_type(scope.row)"
+            effect="dark">{{show(scope.row)}}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="reason" label="失效原因" />
-      <el-table-column v-if="hasPerm()" fixed="right" label="操作" width="300">
+      <el-table-column prop="reason" label="失效原因" align="center" min-width="300" />
+      <el-table-column v-if="hasPerm()" fixed="right" label="操作" align="center" width="150">
         <template slot-scope="scope">
           <el-button
-            v-if="commonShow(scope.row, 0)"
+            v-if="commonShow(scope.row, status.approve.code)"
             type="primary"
             size="small"
-            @click="commonAction(scope.row, 0)"
-          >{{ action.approve }}</el-button>
-          <!-- <el-button
-            v-if="commonShow(scope.row, -1)"
+            @click="commonAction(scope.row, action.approve.code)"
+          >{{ action.approve.message }}</el-button>
+          <el-button
             type="danger"
             size="small"
-            @click="commonAction(scope.row, -1)"
-          >{{ action.remove }}</el-button> -->
+            @click="commonAction(scope.row, action.remove.code)"
+          >{{ action.remove.message }}</el-button>
         </template>
       </el-table-column>
     </el-table>
-    <el-dialog ref="dialog" :visible.sync="dialog" :before-close="closeDialog" :center="true">
-      <apiInfo :apiId="apiId" v-show="showInfo" />
+    <el-dialog ref="dialog" :visible.sync="dialog" title="接口详情信息" >
+      <apiInfo :apiId="apiId" />
     </el-dialog>
   </div>
 </template>
@@ -70,7 +91,7 @@ import tree from './micro-service-tree'
 import apiInfo from './api-info-view'
 import {getUserApi} from '@/api/ms_user_api'
 import {getAllService, updateService} from '@/api/ms_api'
-import {getAllApply, passApply, denyApply} from '@/api/ms_apply'
+import {getAllApply, passApply, denyApply, delApply} from '@/api/ms_apply'
 import { mapGetters } from 'vuex'
 export default {
   components: {
@@ -80,10 +101,7 @@ export default {
   data() {
     return {
       tableData: [],
-      filterArr: [],
       dialog: false,
-      showTree: false,
-      showInfo: false,
       viewStatus: 0,
       checkbox: true,
       status: {
@@ -109,11 +127,20 @@ export default {
         }
       },
       action: {
-        look: '查看',
-        remove: '移除',
-        approve: '审批',
-        pass: '通过',
-        deny: '拒绝'
+        remove: {
+          code: -1,
+          message: '删除'
+        },
+        approve: {
+          code: 0,
+          message: '审批'
+        },
+        pass: {
+          message: '通过'
+        },
+        deny: {
+          message: '拒绝'
+        }
       },
       text: '',
       apiId: 0
@@ -140,45 +167,81 @@ export default {
     },
     commonAction(row, status) {
       let idStatus = []
-      if (row.children) {
-        if (status === this.status.approve.code) {
-            this.$confirm(this.action.approve, '提示', {
-              distinguishCancelAndClose: true,
-              confirmButtonText: this.action.pass,
-              cancelButtonText: this.action.deny,
-              type: 'info',
-              center: 'true'
+      if (status === this.action.approve.code) {
+          this.$confirm(this.action.approve.message + '用户申请', '提示', {
+            distinguishCancelAndClose: true,
+            confirmButtonText: this.action.pass.message,
+            cancelButtonText: this.action.deny.message,
+            type: 'info',
+            center: 'true'
+          })
+          .then(_ => {
+            passApply(row.id).then(_ => {
+              this.$message({
+                type: 'success',
+                message: '操作成功'
+              })
+              row.status = this.status.pass.code
             })
-              .then(_ => {
-                passApply(row.id).then(_ => {
-                  this.$message({
-                    type: 'success',
-                    message: '操作成功'
-                  })
-                  row.status = this.status.pass.code
+            .catch(res => {
+              if(res.code === 450)
+                this.reload()
+            })
+          })
+          .catch(action => {
+            if (action === 'cancel') {
+              denyApply(row.id).then(_ => {
+                this.$message({
+                  type: 'success',
+                  message: '操作成功'
                 })
-                .catch(res => {
-                  if(res.code === 450)
-                    this.reload()
-                })
+                row.status = this.status.deny.code
               })
-              .catch(action => {
-                if (action === 'cancel') {
-                  denyApply(row.id).then(_ => {
-                    this.$message({
-                      type: 'success',
-                      message: '操作成功'
-                    })
-                    row.status = this.status.deny.code
-                  })
-                  .catch(res => {
-                    if(res.code === 450)
-                      this.reload()
-                  })
+              .catch(res => {
+                if(res.code === 450)
+                  this.reload()
+              })
+            }
+          })
+      } else if (status === this.action.remove.code) {
+          this.$confirm('确认' + this.action.remove.message, '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'error'
+          })
+          .then(_ => {
+            delApply([row.id]).then(_ => {
+              this.$message({
+                type: 'success',
+                message: '操作成功'
+              })
+              this.removeItem(
+                this.tableData,
+                item => {
+                  return item.id === row.id
                 }
-              })
-          }
+              )
+            })
+            .catch(res => {
+              if(res.code === 450)
+                this.reload()
+            })
+          })
+          .catch(_ => {})
       }
+    },
+    removeItem(arr, fn) {
+      return arr.some(item => {
+        if (item.children) {
+          return this.removeItem(item.children, fn)
+        } else {
+          if (fn(item)) {
+            const i = arr.indexOf(item)
+            arr.splice(i, 1)
+            return true
+          }
+        }
+      })
     },
     findItem(arr, fn, dataNodes) {
       if (arr instanceof Array) {
@@ -205,26 +268,6 @@ export default {
       }
       return false
     },
-    arraySpanMethod({ row, column, rowIndex, columnIndex }) {
-      if (row.children) {
-        if(column.label === '接口url'){
-          return [0,0]
-        }else if(column.label === '申请时间'){
-          return [1,2]
-        }
-      }else{
-        if (column.label === '接口url') {
-          return [1, 3]
-        } else if (column.label === '申请时间') {
-          return [0, 0]
-        } else if (column.label === '到期时间') {
-          return [0, 0]
-        }
-      }
-    },
-    closeDialog(done) {
-      done()
-    },
     dialogBuSh(i) {
       if (i === this.viewStatus) {
         return true
@@ -233,24 +276,19 @@ export default {
       }
     },
     commonShow(row, status) {
-      if (row.children) {
-        return row.status === status
-      }
-      return false
+      return row.status === status
     },
     show(row) {
-      if (row.children) {
-        if (row.status === this.status.disabled.code) {
-          return this.status.disabled.message
-        } else if (row.status === this.status.expire.code) {
-          return this.status.expire.message
-        } else if (row.status === this.status.approve.code) {
-          return this.status.approve.message
-        } else if (row.status === this.status.deny.code) {
-          return this.status.deny.message
-        } else if (row.status === this.status.pass.code) {
-          return this.status.pass.message
-        }
+      if (row.status === this.status.disabled.code) {
+        return this.status.disabled.message
+      } else if (row.status === this.status.expire.code) {
+        return this.status.expire.message
+      } else if (row.status === this.status.approve.code) {
+        return this.status.approve.message
+      } else if (row.status === this.status.deny.code) {
+        return this.status.deny.message
+      } else if (row.status === this.status.pass.code) {
+        return this.status.pass.message
       }
     },
     tag_type(row){
@@ -266,25 +304,9 @@ export default {
         return 'danger'
       }
     },
-    tableRowClassName({ row, rowIndex }) {
-      // if (!row.children) {
-      //   if (row.status === this.status.deny.code) {
-      //     return 'deny-row'
-      //   } else if (row.status === this.status.on.code) {
-      //     return 'on-row'
-      //   } else if (row.status === this.status.off.code) {
-      //     return 'off-row'
-      //   } else if (row.status === this.status.approve.code) {
-      //     return 'approve-row'
-      //   }
-      // }
-      return ''
-    },
     info(row) {
       this.dialog = true
       this.apiId = row.id
-      this.showTree = false
-      this.showInfo = true
     }
   }
 }
