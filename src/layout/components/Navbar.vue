@@ -55,6 +55,14 @@ import Screenfull from '@/components/Screenfull'
 import SizeSelect from '@/components/SizeSelect'
 import Search from '@/components/HeaderSearch'
 
+let baseURL = process.env.VUE_APP_BASE_API
+if(!baseURL.endsWith('/')){
+  baseURL = baseURL + '/'
+}
+if(baseURL.startsWith('/')){
+  baseURL = baseURL.substring(baseURL.length - 1)
+}
+
 export default {
   components: {
     Breadcrumb,
@@ -84,7 +92,7 @@ export default {
 
     async logout(){
       await this.$store.dispatch('user/resetToken')
-      location.href = 'http://192.168.204.67:8085/logout?path=' + location.href
+      location.href = baseURL + 'sso/logout?referer=' + location.href
     }
   }
 }

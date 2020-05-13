@@ -10,17 +10,22 @@ NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
 const whiteList = ['/login', '/auth-redirect'] // no redirect whitelist
 
+let baseURL = process.env.VUE_APP_BASE_API
+if(!baseURL.endsWith('/')){
+  baseURL = baseURL + '/'
+}
+if(baseURL.startsWith('/')){
+  baseURL = baseURL.substring(baseURL.length - 1)
+}
+
 router.beforeEach(async(to, from, next) => {
 
   const xxl_sso_sessionid = getQueryVariable('xxl_sso_sessionid')
   if(xxl_sso_sessionid){
     store.dispatch('user/setStoreToken', decodeURIComponent(xxl_sso_sessionid))
     // setToken(decodeURIComponent(xxl_sso_sessionid))
-    console.log('去除sso1', location.href)
     location.href = location.href.replace(location.search, '')
     return
-    console.log('去除sso2', location.href)
-    // location.href = 'localhost:9527'
   }
 
   // start progress bar
@@ -30,17 +35,8 @@ router.beforeEach(async(to, from, next) => {
   document.title = getPageTitle(to.meta.title)
 
   // determine whether the user has logged in
-  
 
   const hasToken = getToken()
-
-  // console.log('location.href:', location.href)
-  // console.log('location.search:', location.search)
-  // console.log('location.hash:', location.hash)
-  // console.log('location.host:', location.host)
-  // console.log('location.hostname:', location.hostname)
-  // console.log('location.pathname:', location.pathname)
-
 
   if (hasToken) {
     if (to.path === '/login') {
@@ -93,9 +89,8 @@ router.beforeEach(async(to, from, next) => {
           Message.error(error || 'Has Error')
           // next(`/login?redirect=${to.path}`)
           NProgress.done()
-          location.href = 'http://192.168.204.67:8085/login?redirect_url=' + location.href
+          location.href = baseURL + 'sso/login?referer=' + location.href
           return
-          console.log('重定向1：', location.href)
         }
       }
     }
@@ -109,8 +104,7 @@ router.beforeEach(async(to, from, next) => {
       // other pages that do not have permission to access are redirected to the login page.
       // next(`/login?redirect=${to.path}`)
       NProgress.done()
-      location.href = 'http://192.168.204.67:8085/login?redirect_url=' + location.href
-      console.log('重定向2：', location.href)
+      location.href = baseURL + 'sso/login?referer=' + location.href
     }
   }
 })

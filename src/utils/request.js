@@ -10,6 +10,15 @@ const service = axios.create({
   timeout: 5000 // request timeout
 })
 
+let baseURL = process.env.VUE_APP_BASE_API
+if(!baseURL.endsWith('/')){
+  baseURL = baseURL + '/'
+}
+if(baseURL.startsWith('/')){
+  baseURL = baseURL.substring(baseURL.length - 1)
+}
+
+
 // request interceptor
 service.interceptors.request.use(
   config => {
@@ -64,8 +73,7 @@ service.interceptors.response.use(
         //   })
         // })
         store.dispatch('user/resetToken').then(() => {
-          // location.href = 'http://192.168.204.67:8085/logout?path=' + location.href
-          location.href = 'http://192.168.204.67:8085/login?redirect_url=' + location.href
+          location.href = baseURL + 'sso/login?referer=' + location.href
           return
         })
       } else {

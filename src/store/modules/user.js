@@ -78,7 +78,8 @@ const actions = {
         commit('SET_INTRODUCTION', introduction)
         resolve(data)
       }).catch(error => {
-        reject(error)
+        // 去除获取用户信息报错提示
+        // reject(error)
       })
     })
   },
