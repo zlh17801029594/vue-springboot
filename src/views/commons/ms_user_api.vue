@@ -42,6 +42,10 @@
               <el-tag
                 :type="tag_type(scope.row)"
                 effect="dark">{{show(scope.row)}}</el-tag>
+              <el-tag
+                v-if="scope.row.apiStatus !== 2 && scope.row.status !== status.expire.code"
+                type="danger"
+                effect="dark">{{status.disabled.message}}</el-tag>
             </span>
         </template>
       </el-table-column>
@@ -155,7 +159,7 @@ export default {
   computed: {
     colorStatus() {
       return {
-        red: this.status.disabled,
+        // red: this.status.disabled,
         gray: this.status.expire,
         orange: this.status.off,
         green: this.status.on
@@ -194,7 +198,7 @@ export default {
         //  && status !== this.action.remove.code
         if (status !== this.action.look.code && status !== this.action.remove.code) {
           childrenArr = childrenArr.filter(e => {
-            if(e.apiStatus === 2 || e.status === this.status.expire.code){
+            // if(e.apiStatus === 2 || e.status === this.status.expire.code){
               if(status === this.action.on.code){
                 return e.status === this.status.off.code
               }else if(status === this.action.off.code){
@@ -202,14 +206,14 @@ export default {
               }else if(status === this.action.remove.code){
                 return e.status === this.status.expire.code
               }
-            }
+            // }
           })
         }
         idStatus = childrenArr.map(e => {
           if(e.apiStatus === 2 || e.status === this.status.expire.code)
             return { id: e.apiId, ownerId: e.id, status: e.status }
           else
-            return { id: e.apiId, ownerId: e.id, status: this.status.disabled.code }
+            return { id: e.apiId, ownerId: e.id, status: e.status, enable: true }
         })
       } else {
         // 单条数据不展示树结构
@@ -422,14 +426,14 @@ export default {
     commonShow(row, status) {
       if (row.children) {
         const flag = row.children.some(e => {
-          if(e.apiStatus === 2 || status === this.status.expire.code)
+          // if(e.apiStatus === 2 || status === this.status.expire.code)
             return e.status === status
         })
         if (flag) {
           return true
         }
       } else {
-        if(row.apiStatus === 2 || status === this.status.expire.code)
+        // if(row.apiStatus === 2 || status === this.status.expire.code)
           return row.status === status
       }
       return false
@@ -454,11 +458,11 @@ export default {
         let b = 0
         let c = 0
         let d = 0
-        let x = 0
+        // let x = 0
         arr.forEach(element => {
-          if (element.apiStatus !== 2 && element.status !== this.status.expire.code){
-            x++
-          }else{
+          // if (element.apiStatus !== 2 && element.status !== this.status.expire.code){
+          //   x++
+          // }else{
             if (element.status === this.status.on.code) {
               b++
             } else if (element.status === this.status.off.code) {
@@ -466,16 +470,17 @@ export default {
             } else if (element.status === this.status.expire.code) {
               d++
             }
-          }
+          // }
         })
         return this.status.on.message + b + '、' +
                 this.status.off.message + c + '、' +
-                this.status.expire.message + d + '、' +
-                this.status.disabled.message + x
+                this.status.expire.message + d
+                //  + '、' +
+                // this.status.disabled.message + x
       } else {
-        if (row.apiStatus !== 2 && row.status !== this.status.expire.code){
-          return this.status.disabled.message
-        }
+        // if (row.apiStatus !== 2 && row.status !== this.status.expire.code){
+        //   return this.status.disabled.message
+        // }
         if (row.status === this.status.on.code) {
           return this.status.on.message
         } else if (row.status === this.status.off.code) {
@@ -486,9 +491,9 @@ export default {
       }
     },
     tag_type(row){
-      if (row.apiStatus !== 2 && row.status !== this.status.expire.code){
-        return 'danger'
-      }
+      // if (row.apiStatus !== 2 && row.status !== this.status.expire.code){
+      //   return 'danger'
+      // }
       if (row.status === this.status.on.code) {
         return 'success'
       } else if (row.status === this.status.off.code) {

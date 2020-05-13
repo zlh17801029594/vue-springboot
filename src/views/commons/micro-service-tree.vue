@@ -34,6 +34,7 @@
         >
           <span slot-scope="{node, data}" class="custom-tree-node">
             <span :style="{color: setColor(data.status)}">{{ node.label }}</span>
+            <el-tag v-if="data.enable" size="mini" type="danger" effect="dark">暂失效</el-tag>
             <span />
           </span>
         </el-tree>
@@ -107,16 +108,18 @@ export default {
               treeDataTemp.push(fath)
               e.children.forEach(e2 => {
                 if (ids.indexOf(e2.id) !== -1) {
-                  let status
+                  let status,enable
                   filterArrTemp.forEach(e3 => {
                     if (e3.id === e2.id) {
                       status = e3['status']
+                      enable = e3['enable']
                     }
                   })
                   const chil = {
                     id: e2.id,
                     label: e2.label,
-                    status: status
+                    status: status,
+                    enable: enable
                   }
                   fath.children.push(chil)
                 }
@@ -124,16 +127,18 @@ export default {
             }
           } else {
             if (ids.indexOf(e.id) !== -1) {
-              let status
+              let status,enable
               filterArrTemp.forEach(e1 => {
                 if (e1.id === e.id) {
                   status = e1['status']
+                  enable = e3['enable']
                 }
               })
               const fath = {
                 id: e.id,
                 label: e.label,
-                status: status
+                status: status,
+                enable: enable
               }
               treeDataTemp.push(fath)
             }
