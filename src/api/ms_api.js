@@ -1,10 +1,10 @@
 import request from '@/utils/request'
 
-export function updateService(msUrl) {
+export function updateService(url) {
     return request({
-        url: '/api/update',
+        url: '/api/updateAll',
         method: 'post',
-        params: {msUrl}
+        params: {url}
     })
 }
 
@@ -24,7 +24,7 @@ export function getServiceDetails(id) {
 
 export function getService() {
     return request({
-        url: '/api',
+        url: '/api/user',
         method: 'get'
     })
 }

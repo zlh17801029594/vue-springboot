@@ -11,9 +11,12 @@
     <el-main>
       <el-table
         :data="tableData"
+        v-loading="loading"
+        element-loading-text="加载中..."
         row-key="id"
         :indent="0"
         border
+        highlight-current-row
         :row-class-name="tableRowClassName"
         style="width: 100%"
       >
@@ -23,7 +26,7 @@
           width="55">
         </el-table-column> -->
         <el-table-column width="48" />
-        <el-table-column prop="label" label="微服务/接口名称" align="center" min-width="250" />
+        <el-table-column prop="name" label="微服务/接口名称" align="center" min-width="250" />
         <el-table-column label="类型" align="center" min-width="80">
           <template slot-scope="scope">
             <el-tag>{{scope.row.children ? '微服务' : '接口'}}</el-tag>
@@ -31,11 +34,11 @@
         </el-table-column>
         <el-table-column label="接口url" align="center" min-width="200">
           <template slot-scope="scope">
-            <span v-if="scope.row.children">{{ 'http://' + scope.row.host + scope.row.uri }}</span>
-            <span v-else><el-button type="text" @click="info(scope.row)">{{ scope.row.uri }}</el-button></span>
+            <span v-if="scope.row.children">{{ 'http://' + scope.row.host + scope.row.url }}</span>
+            <span v-else><el-button type="text" @click="info(scope.row)">{{ scope.row.url }}</el-button></span>
           </template>
         </el-table-column>
-        <el-table-column prop="method" label="请求方式" align="center" min-width="80" />
+        <el-table-column prop="httpMethod" label="请求方式" align="center" min-width="80" />
         <el-table-column prop="sensitiveNum" label="敏感级别" align="center" min-width="80" />
         <el-table-column
           prop="status"
@@ -134,6 +137,7 @@ export default {
   data() {
     return {
       tableData: [],
+      loading: true,
       filterArr: [],
       dialog: false,
       dialog3: false,
@@ -214,7 +218,7 @@ export default {
         }
       ).then(({ value }) => {
         updateService(value).then(response => {
-          this.reload()
+          this.getList()
           this.$message({
             type: 'success',
             message: '操作成功'
@@ -675,13 +679,19 @@ export default {
       }
       this.dialog3 = true
       this.apiId = row.id
+    },
+    getList(){
+      this.loading = true
+      getAllService().then(response => {
+        this.tableData = response.data
+        this.loading = false
+      }).catch(_ => {
+        this.loading = false
+      })
     }
   },
   created() {
-    getAllService().then(response => {
-      this.tableData = response.data
-      console.log(this.tableData)
-    })
+    this.getList()
   }
 }
 </script>

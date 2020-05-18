@@ -505,13 +505,13 @@ export const asyncRoutes = [
     ]
   },
   {
-    path: '/ms_apply',
+    path: '/ms_apply_tabs',
     component: Layout,
     children: [
       {
         path: 'index',
-        name: 'ms_apply',
-        component: () => import('@/views/commons/ms_apply'),
+        name: 'ms_apply_tabs',
+        component: () => import('@/views/commons/ms_apply_tabs'),
         meta: {title: '接口审批', icon: 'component'}
       }
     ]

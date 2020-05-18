@@ -92,7 +92,7 @@ service.interceptors.response.use(
   error => {
     console.log('err' + error) // for debug
     Message({
-      message: error.message,
+      message: '网络异常',
       type: 'error',
       duration: 5 * 1000
     })

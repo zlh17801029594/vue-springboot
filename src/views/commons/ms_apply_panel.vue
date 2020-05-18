@@ -1,71 +1,78 @@
 <template>
-  <div class="app-container">
-    <el-table
+  <div>
+    <el-table 
       :data="tableData"
-      row-key="id"
-      border
-      style="width: 100%"
-    >
-      <el-table-column type="index" :index="1" />
-      <el-table-column type="expand">
+      row-key="id" 
+      border 
+      highlight-current-row 
+      style="width: 100%">
+        <el-table-column label="#" type="index" :index="1"
+        v-loading="loading"
+        element-loading-text="加载中..."/>
+        <el-table-column type="expand">
         <template slot-scope="props">
-          <el-table
-            :data="props.row.msApiDtos"
+            <el-table
+            :data="props.row.applyDetailss"
             :show-header="false"
             border
             style="width: 100%">
-            <el-table-column type="index" :index="1" />
-            <el-table-column
-              prop="label"
-              label="接口名">
-            </el-table-column>
-            <el-table-column label="接口url">
-              <template slot-scope="scope">
-                <el-button type="text" @click="info(scope.row)">{{ scope.row.uri }}</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+                <el-table-column type="index" :index="1" />
+                <el-table-column
+                    prop="apiName"
+                    label="接口名称">
+                </el-table-column>
+                <el-table-column label="接口url">
+                    <template slot-scope="scope">
+                    <el-button type="text" @click="info(scope.row)">{{ scope.row.apiUrl }}</el-button>
+                    </template>
+                </el-table-column>
+                <el-table-column
+                    prop="apiHttpMethod"
+                    label="请求方式">
+                </el-table-column>
+            </el-table>
         </template>
-      </el-table-column>
-      <el-table-column prop="applyTime" label="申请时间" align="center" min-width="200" />
-      <el-table-column prop="expireTime" label="到期时间" align="center" min-width="200" />   
-      <el-table-column prop="label" label="申请用户" align="center" min-width="100" />
-      <el-table-column
+        </el-table-column>
+        <el-table-column prop="applyTime" label="申请时间" align="center" min-width="200" />
+        <el-table-column prop="expireTime" label="到期时间" align="center" min-width="200" />   
+        <el-table-column prop="username" label="申请用户" align="center" min-width="100" />
+        <el-table-column
         prop="status"
         label="状态"
         align="center"
         :filters="[{ text: status.disabled.message, value: status.disabled.code }
-                   , { text: status.expire.message, value: status.expire.code }
-                   , { text: status.approve.message, value: status.approve.code }
-                   , { text: status.deny.message, value: status.deny.code }
-                   , { text: status.pass.message, value: status.pass.code }]"
+                    , { text: status.expire.message, value: status.expire.code }
+                    , { text: status.approve.message, value: status.approve.code }
+                    , { text: status.deny.message, value: status.deny.code }
+                    , { text: status.pass.message, value: status.pass.code }]"
         :filter-method="filterStatus"
         filter-placement="bottom-end"
         min-width="100"
-      >
+        >
         <template slot-scope="scope">
-          <el-tag
+            <el-tag
             :type="tag_type(scope.row)"
             effect="dark">{{show(scope.row)}}</el-tag>
         </template>
-      </el-table-column>
-      <el-table-column prop="reason" label="失效原因" align="center" min-width="300" />
-      <el-table-column v-if="hasPerm()" fixed="right" label="操作" align="center" width="150">
+        </el-table-column>
+        <el-table-column prop="reason" label="失效原因" align="center" min-width="300" />
+        <el-table-column v-if="hasPerm()" fixed="right" label="操作" align="center" width="150">
         <template slot-scope="scope">
-          <el-button
+            <el-button
             v-if="commonShow(scope.row, status.approve.code)"
             type="primary"
             size="small"
             @click="commonAction(scope.row, action.approve.code)"
-          >{{ action.approve.message }}</el-button>
-          <el-button
+            >{{ action.approve.message }}</el-button>
+            <el-button
             type="danger"
             size="small"
             @click="commonAction(scope.row, action.remove.code)"
-          >{{ action.remove.message }}</el-button>
+            >{{ action.remove.message }}</el-button>
         </template>
-      </el-table-column>
+        </el-table-column>
     </el-table>
+    <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.limit" @pagination="getList" />
     <el-dialog ref="dialog" :visible.sync="dialog" title="接口详情信息" >
       <apiInfo :apiId="apiId" />
     </el-dialog>
@@ -78,10 +85,19 @@ import {getUserApi} from '@/api/ms_user_api'
 import {getAllService, updateService} from '@/api/ms_api'
 import {getAllApply, passApply, denyApply, delApply} from '@/api/ms_apply'
 import { mapGetters } from 'vuex'
+import Pagination from '@/components/Pagination'
 export default {
+  name: 'tabPane',
+  props: {
+    type: {
+      type: String,
+      default: 'approve'
+    }
+  },
   components: {
     tree,
-    apiInfo
+    apiInfo,
+    Pagination
   },
   data() {
     return {
@@ -128,23 +144,45 @@ export default {
         }
       },
       text: '',
-      apiId: 0
+      apiId: 0,
+      total: 0,
+      listQuery: {
+        page: 1,
+        limit: 20,
+        data: {
+            status: 0
+        }
+      },
+      loading: true
     }
   },
   inject: ['reload'],
   computed: {
     ...mapGetters([
       'roles'
-    ])
+    ]),
+    status1(){
+        return this.status[this.type].code
+    }
   },
   created() {
-    getAllApply().then(response => {
-      this.tableData = response.data
-    })
+    this.getList()
   },
   mounted() {
   },
   methods: {
+    getList(){
+      this.loading = true
+      this.listQuery.data.status = this.status1
+      console.log(this.listQuery)
+      getAllApply(this.listQuery).then(response => {
+        this.tableData = response.data.list
+        this.total = response.data.total
+        this.loading = false
+      }).catch(_ => {
+          this.loading = false
+      })
+    },
     hasPerm(){
       return this.roles.some(item => {
         return ['ADMIN', 'SUPER_ADMIN'].indexOf(item) !== -1
@@ -166,7 +204,7 @@ export default {
                 type: 'success',
                 message: '操作成功'
               })
-              row.status = this.status.pass.code
+              this.getList()
             })
             .catch(res => {
               if(res.code === 450)
@@ -195,7 +233,7 @@ export default {
             type: 'error'
           })
           .then(_ => {
-            delApply([row.id]).then(_ => {
+            delApply(row.id).then(_ => {
               this.$message({
                 type: 'success',
                 message: '操作成功'
@@ -296,14 +334,3 @@ export default {
   }
 }
 </script>
-<style>
-.el-table .expire-row {
-  background: #f56c6c;
-}
-.el-table .on-row {
-  background: #67c23a;
-}
-.el-table .off-row {
-  background: #e6a23c;
-}
-</style>

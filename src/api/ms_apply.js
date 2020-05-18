@@ -8,10 +8,11 @@ export function createApply(data){
     })
 }
 
-export function getAllApply(){
+export function getAllApply(data){
     return request({
-        url: '/apply/all',
-        method: 'get',
+        url: '/apply/list',
+        method: 'post',
+        data
     })
 }
 
@@ -22,11 +23,10 @@ export function getApply(){
     })
 }
 
-export function delApply(data){
+export function delApply(id){
     return request({
-        url: '/apply/del',
+        url: `/apply/del/${id}`,
         method: 'post',
-        data
     })
 }
 

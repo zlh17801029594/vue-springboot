@@ -2,10 +2,13 @@
   <div class="app-container">
     <el-table
       :data="tableData"
+      v-loading="loading"
+      element-loading-text="加载中..."
       :span-method="arraySpanMethod"
       row-key="id"
       :row-class-name="tableRowClassName"
       border
+      highlight-current-row
       :indent="0"
       style="width: 100%"
     >
@@ -111,6 +114,7 @@ export default {
   data() {
     return {
       tableData: [],
+      loading: true,
       filterArr: [],
       dialog: false,
       dialog3: false,
@@ -167,13 +171,20 @@ export default {
     }
   },
   created() {
-    getUserApi().then(response => {
-      this.tableData = response.data
-    })
+    this.getList()
   },
   mounted() {
   },
   methods: {
+    getList(){
+      this.loading = true
+      getUserApi().then(response => {
+        this.tableData = response.data
+        this.loading = false
+      }).catch(_ => {
+        this.loading = false
+      })
+    },
     textShow(row){
       if(row.children || row.apiStatus === 2 || row.status === this.status.expire.code){
         return false
