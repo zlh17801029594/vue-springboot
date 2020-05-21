@@ -2,13 +2,14 @@
   <div>
     <el-table 
       :data="tableData"
+      v-loading="loading"
+      element-loading-text="加载中..."
       row-key="id" 
       border 
       highlight-current-row 
       style="width: 100%">
         <el-table-column label="#" type="index" :index="1"
-        v-loading="loading"
-        element-loading-text="加载中..."/>
+        />
         <el-table-column type="expand">
         <template slot-scope="props">
             <el-table
@@ -37,23 +38,16 @@
         <el-table-column prop="expireTime" label="到期时间" align="center" min-width="200" />   
         <el-table-column prop="username" label="申请用户" align="center" min-width="100" />
         <el-table-column
-        prop="status"
-        label="状态"
-        align="center"
-        :filters="[{ text: status.disabled.message, value: status.disabled.code }
-                    , { text: status.expire.message, value: status.expire.code }
-                    , { text: status.approve.message, value: status.approve.code }
-                    , { text: status.deny.message, value: status.deny.code }
-                    , { text: status.pass.message, value: status.pass.code }]"
-        :filter-method="filterStatus"
-        filter-placement="bottom-end"
-        min-width="100"
-        >
-        <template slot-scope="scope">
-            <el-tag
-            :type="tag_type(scope.row)"
-            effect="dark">{{show(scope.row)}}</el-tag>
-        </template>
+          prop="status"
+          label="申请状态"
+          align="center"
+          min-width="100"
+          >
+          <template slot-scope="scope">
+              <el-tag
+              :type="tag_type(scope.row)"
+              effect="dark">{{show(scope.row)}}</el-tag>
+          </template>
         </el-table-column>
         <el-table-column prop="reason" label="失效原因" align="center" min-width="300" />
         <el-table-column v-if="hasPerm()" fixed="right" label="操作" align="center" width="150">
@@ -74,7 +68,7 @@
     </el-table>
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.limit" @pagination="getList" />
     <el-dialog ref="dialog" :visible.sync="dialog" title="接口详情信息" >
-      <apiInfo :apiId="apiId" />
+      <apiInfo v-if="api" :api="api" />
     </el-dialog>
   </div>
 </template>
@@ -82,7 +76,7 @@
 import tree from './micro-service-tree'
 import apiInfo from './api-info-view'
 import {getUserApi} from '@/api/ms_user_api'
-import {getAllService, updateService} from '@/api/ms_api'
+import {getServiceById} from '@/api/ms_api'
 import {getAllApply, passApply, denyApply, delApply} from '@/api/ms_apply'
 import { mapGetters } from 'vuex'
 import Pagination from '@/components/Pagination'
@@ -144,7 +138,7 @@ export default {
         }
       },
       text: '',
-      apiId: 0,
+      api: undefined,
       total: 0,
       listQuery: {
         page: 1,
@@ -171,17 +165,16 @@ export default {
   mounted() {
   },
   methods: {
-    getList(){
+    async getList(){
       this.loading = true
       this.listQuery.data.status = this.status1
       console.log(this.listQuery)
-      getAllApply(this.listQuery).then(response => {
+      await getAllApply(this.listQuery).then(response => {
         this.tableData = response.data.list
         this.total = response.data.total
-        this.loading = false
       }).catch(_ => {
-          this.loading = false
       })
+      this.loading = false
     },
     hasPerm(){
       return this.roles.some(item => {
@@ -204,11 +197,16 @@ export default {
                 type: 'success',
                 message: '操作成功'
               })
-              this.getList()
+              this.removeItem(
+                this.tableData,
+                item => {
+                  return item.id === row.id
+                }
+              )
             })
             .catch(res => {
               if(res.code === 450)
-                this.reload()
+                this.getList()
             })
           })
           .catch(action => {
@@ -218,11 +216,17 @@ export default {
                   type: 'success',
                   message: '操作成功'
                 })
-                row.status = this.status.deny.code
+                // row.status = this.status.deny.code
+                this.removeItem(
+                  this.tableData,
+                  item => {
+                    return item.id === row.id
+                  }
+                )
               })
               .catch(res => {
                 if(res.code === 450)
-                  this.reload()
+                  this.getList()
               })
             }
           })
@@ -247,7 +251,7 @@ export default {
             })
             .catch(res => {
               if(res.code === 450)
-                this.reload()
+                this.getList()
             })
           })
           .catch(_ => {})
@@ -278,18 +282,6 @@ export default {
           }
         })
       }
-    },
-    filterStatus(value, row) {
-      if (row.children) {
-        return row.children.some(e => {
-          return e.status === value
-        })
-      } else {
-        if (row.status === value) {
-          return true
-        }
-      }
-      return false
     },
     dialogBuSh(i) {
       if (i === this.viewStatus) {
@@ -327,9 +319,14 @@ export default {
         return 'danger'
       }
     },
-    info(row) {
+    async info(row) {
+      if(!row.api){
+        await getServiceById(row.apiId).then(response => {
+          this.$set(row, 'api', response.data)
+        })
+      }
+      this.api = row.api
       this.dialog = true
-      this.apiId = row.id
     }
   }
 }

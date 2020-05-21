@@ -2,101 +2,48 @@
   <el-container>
     <el-header align="left">
       <el-row>
-        <el-col :span="3"><el-button type="primary" size="small" @click="click1" :disabled="isSelected">申请接口</el-button></el-col>
-        <el-col :span="21">
+        <el-col :span="2"><el-button type="primary" size="small" @click="click1" :disabled="isSelected">申请接口</el-button></el-col>
+        <el-col :span="22">
           <span style="font-size: 14px;">提示：
             <span :style="{color: setColor(0)}">蓝色</span>:待审批、
-            <span :style="{color: setColor(2)}">绿色</span>:已获取(启用状态)、
-            <span :style="{color: setColor(1)}">橙色</span>:已获取(停用状态)
+            <span :style="{color: setColor(2)}">绿色</span>:已启用、
+            <span :style="{color: setColor(1)}">橙色</span>:已停用
           </span>
         </el-col>
       </el-row>
     </el-header>
     <el-container>
-        <el-aside ref="left" style="width: 400px">
-          <div class="tree-container">
-            <el-tree
-            class="tree"
-            :indent="0"
-            ref="tree"
-            :data="treeData"
-            :show-checkbox="hasPerm()"
-            default-expand-all
-            node-key="id"
-            highlight-current
-            :expand-on-click-node="false"
-            @node-click="clickNode"
-            @check="selectedChange"
-            :props="defaultProps">
-            <span class="custom-tree-node" slot-scope="{node, data}">
-                <span :style="{color: setColor(data.userApiStatus)}">{{ node.label }}</span>
-                <span>
-                
+        <el-aside ref="left" style="width: 500px">
+          <el-card shadow="never">
+            <div class="tree-container">
+              <el-tree
+              class="tree"
+              :indent="0"
+              ref="tree"
+              v-loading="loading"
+              element-loading-text="加载中..."
+              :data="treeData"
+              :show-checkbox="hasPerm()"
+              default-expand-all
+              node-key="id"
+              highlight-current
+              :expand-on-click-node="false"
+              @node-click="clickNode"
+              @check="selectedChange"
+              :props="defaultProps">
+                <span class="custom-tree-node" slot-scope="{node, data}">
+                    <span :style="{color: setColor(data.userApiStatus)}">{{ node.label }}</span>
+                    <span>
+                    
+                    </span>
                 </span>
-            </span>
-            </el-tree>
-          </div>
+              </el-tree>
+            </div>
+          </el-card>
+          
         </el-aside>
         <el-main ref="right">
-            <el-collapse v-for="(service, index) in data" :key="index" v-model="activeNames" @change="handleChange" accordion>
-                <el-collapse-item :title="titleFormat([service.label, service.basePath])" :name="service.id">
-                  <el-collapse v-for="(api, index) in service.children" :key="index" v-model="activeNames1" accordion style="padding-left: 20px">
-                    <el-collapse-item :title="titleFormat([api.label, api.url])" :name="api.id">
-                      <!-- <apiInfo :api="api" /> -->
-                      <el-form label-position="left" inline class="demo-table-expand">
-                        <el-form-item label="接口描述">
-                          <span>{{ api.label }}</span>
-                        </el-form-item>
-                        <el-form-item label="接口uri">
-                          <span>{{ api.uri }}</span>
-                        </el-form-item>
-                        <el-form-item label="请求方法">
-                          <span>{{ api.method }}</span>
-                        </el-form-item>
-                        <el-form-item label="请求参数">
-                          <span>
-                            <el-table :data="api.otherInfo.parameters" stripe border style="width: 100%;">
-                              <el-table-column label="参数名" prop="name"></el-table-column>
-                              <el-table-column label="参数位置" prop="in"></el-table-column>
-                              <el-table-column label="参数描述" prop="description"></el-table-column>
-                              <el-table-column label="是否必须" prop="required" :formatter="booleanFormat"></el-table-column>
-                              <el-table-column label="参数类型" prop="type"></el-table-column>
-                              <el-table-column label="是否可以为空白字符串" prop="allowEmptyValue" :formatter="booleanFormat"></el-table-column>
-                              <el-table-column label="参数样例" prop="example"></el-table-column>
-                            </el-table>
-                          </span>
-                        </el-form-item>
-                        <el-form-item label="返回结果样例">
-                          <pre v-html="syntaxHighlight(api.otherInfo.result)"></pre>
-                          <!--<pre>{{ api.result}}</pre>-->
-                          <!--<span>{{ api.result}}</span>-->
-                          <!--:span布局-->
-                          <!--<span>
-                              <div  v-for="person in test" style="width: 100%;">
-                              <el-row>
-                                  <el-col :span="8">{{person.name}}</el-col>
-                                  <el-col :span="8">{{person.age}}</el-col>
-                              </el-row>
-                              </div>
-                          </span>-->
-                        </el-form-item>
-                        <el-form-item label="接收参数方式">
-                          <span>{{ api.otherInfo.consumes }}</span>
-                        </el-form-item>
-                        <el-form-item label="返回结果方式">
-                          <span>{{ api.otherInfo.produces }}</span>
-                        </el-form-item>
-                        <el-form-item label="响应码">
-                          <el-table :data="api.otherInfo.responses" stripe border style="width: 100%;">
-                            <el-table-column label="响应码" prop="code"></el-table-column>
-                            <el-table-column label="描述" prop="description"></el-table-column>
-                          </el-table>
-                        </el-form-item>
-                      </el-form>
-                    </el-collapse-item>
-                  </el-collapse>
-                </el-collapse-item>
-            </el-collapse>
+            <apiInfo v-if="api" :api="api" />
         </el-main>
     </el-container>
     <el-dialog
@@ -118,7 +65,7 @@
 import info from './apply-for-info'
 import apiInfo from './api-info-view'
 
-import {getService} from '@/api/ms_api'
+import {getServiceByUser, getServiceDetailsById} from '@/api/ms_api'
 import {createApply} from '@/api/ms_apply'
 import { mapGetters } from 'vuex'
 
@@ -128,58 +75,37 @@ export default {
     },
     data() {
       return {
-        activeNames: '',
-        activeNames1: '',
         data: [],
         defaultProps: {
           children: 'children',
-          label: 'label'
+          label: 'name',
+          disabled: this.disable
         },
         dialog: false,
         selected: [],
         isSelected: true,
-        id: 0
+        id: 0,
+        api: undefined,
+        loading: true
       }
     },
     inject: ['reload'],
     computed: {
       treeData(){
-        return this.filterProp(this.data)
+        return this.data
       },
       ...mapGetters([
       'roles'
       ])
     },
     methods: {
+      disable(data, node){
+        return typeof data.userApiStatus !== 'undefined'
+      },
       hasPerm(){
       return !this.roles.some(item => {
           return ['ADMIN', 'SUPER_ADMIN'].indexOf(item) !== -1
         })
-      },
-      filterProp(data){
-        if(data instanceof Array){
-          return data.map(item => {
-            return this.filterProp(item)
-          })
-        }else{
-          if(data.children){
-            const children = this.filterProp(data.children)
-            return {
-              id: data.id,
-              label: data.label,
-              children: children
-            }
-          }else{
-            return {
-              id: data.id,
-              label: data.label,
-              // 真实环境通过用户关系表查询
-              userApiStatus: data.userApiStatus,
-              // 真实数据改成status判断
-              disabled: typeof data.userApiStatus !== 'undefined' 
-            }
-          }
-        }
       },
       selectedChange(){
         const selectNodeIds = this.$refs.tree.getCheckedKeys(true)
@@ -219,7 +145,8 @@ export default {
                   message: '操作成功'
                 })
               dataNodes.forEach(e => {
-                e.userApiStatus = 0
+                // e.userApiStatus = 0
+                this.$set(e, 'userApiStatus', 0)
                 e.disabled = true
               })
               this.$refs.tree.setCheckedKeys([])
@@ -247,62 +174,13 @@ export default {
           }
         })
       },
-      clickNode (data, node, obj) {	
-        if (node.level === 1) {
-            this.activeNames = data.id
-            this.activeNames1 = ''
-            console.log(this.activeNames, this.activeNames1)
-        } else if (node.level === 2) {
-            this.activeNames = node.parent.data.id
-            this.activeNames1 = data.id
-            console.log(this.activeNames, this.activeNames1)
+      async clickNode (data, node, obj) {	
+        if(data.type && !data.apiDetails){
+          await getServiceDetailsById(data.id).then(response => {
+            this.$set(data, 'apiDetails', response.data)
+          })
         }
-      },
-      handleChange(val) {
-        console.log(val)
-      },
-      handleSelectionChange(val) {
-        console.log(val)
-      },
-      booleanFormat(row, col, cellValue){
-        let value = ''
-        if (cellValue) {
-          value = '是';
-        } else {
-          value = '否'
-        }
-        return value
-      },
-      titleFormat(list) {
-        let title = ''
-        list.forEach(value => {
-          if (value){
-            title += value
-            title += "\t"
-          }
-        })
-        return title
-      },
-      syntaxHighlight(json) {
-        if (typeof json != 'string') {
-          json = JSON.stringify(json, undefined, 2);
-        }
-        json = json.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
-        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
-          let cls = 'number';
-          if (/^"/.test(match)) {
-            if (/:$/.test(match)) {
-              cls = 'key';
-            } else {
-              cls = 'string';
-            }
-          } else if (/true|false/.test(match)) {
-            cls = 'boolean';
-          } else if (/null/.test(match)) {
-            cls = 'null';
-          }
-          return '<span class="' + cls + '">' + match + '</span>';
-        });
+        this.api = data
       },
       setColor(status) {
         if (status === 0) {
@@ -315,27 +193,18 @@ export default {
           return '#909399'
         }
       },
-      setId(data){
-        const arr = data.children
-        if(data instanceof Array){
-          data.forEach(item => {
-            this.setId(item)
-          })
-        }else if(arr instanceof Array){
-          this.$set(data, 'id', this.id++)
-          arr.forEach(item => {
-            this.setId(item)
-          })
-        }else{
-          this.$set(data, 'id', this.id++)
+      async getList(){
+        getServiceByUser().then(response => {
+        this.data = response.data
+        if(this.data && this.data.length){
+          this.api = this.data[0]
         }
+        console.log(this.data)
+      })
       }
     },
     created() {
-      getService().then(response => {
-        this.data = response.data
-        console.log(this.data)
-      })
+      
     }
 }
 </script>
@@ -387,13 +256,6 @@ export default {
     width: 24px;
   }
   
-  /*pre {outline: 1px solid #ccc; }*/
-  .string { color: green; }
-  .number { color: darkorange; }
-  .boolean { color: blue; }
-  .null { color: magenta; }
-  .key { color: red; }
-
   .el-header {
     line-height: 60px;
   }

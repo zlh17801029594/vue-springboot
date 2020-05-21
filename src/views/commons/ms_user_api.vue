@@ -140,7 +140,7 @@ export default {
       },
       action: {
         look: {
-          code: 0,
+          code: 3,
           message: '查看'
         },
         remove: {

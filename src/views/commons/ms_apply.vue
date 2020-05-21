@@ -32,7 +32,7 @@
       <el-table-column prop="label" label="申请用户" align="center" min-width="100" />
       <el-table-column
         prop="status"
-        label="状态"
+        label="申请状态"
         align="center"
         :filters="[{ text: status.disabled.message, value: status.disabled.code }
                    , { text: status.expire.message, value: status.expire.code }
@@ -67,7 +67,7 @@
       </el-table-column>
     </el-table>
     <el-dialog ref="dialog" :visible.sync="dialog" title="接口详情信息" >
-      <apiInfo :apiId="apiId" />
+      <apiInfo v-if="api" :api="api" />
     </el-dialog>
   </div>
 </template>
@@ -75,7 +75,7 @@
 import tree from './micro-service-tree'
 import apiInfo from './api-info-view'
 import {getUserApi} from '@/api/ms_user_api'
-import {getAllService, updateService} from '@/api/ms_api'
+import {getServiceById} from '@/api/ms_api'
 import {getAllApply, passApply, denyApply, delApply} from '@/api/ms_apply'
 import { mapGetters } from 'vuex'
 export default {
@@ -128,7 +128,7 @@ export default {
         }
       },
       text: '',
-      apiId: 0
+      api: undefined
     }
   },
   inject: ['reload'],
@@ -290,8 +290,13 @@ export default {
       }
     },
     info(row) {
-      this.dialog = true
-      this.apiId = row.id
+      console.log(row)
+      if(!row.api){
+        getServiceById(row.apiId).then(response => {
+          this.$set(row, 'api', response.data)
+        })
+      }
+      this.api = row.api
     }
   }
 }

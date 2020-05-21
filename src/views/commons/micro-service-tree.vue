@@ -27,6 +27,7 @@
           :indent="0"
           :data="treeData"
           :show-checkbox="checkbox"
+          :props="defaultProps"
           node-key="id"
           highlight-current
           default-expand-all
@@ -47,7 +48,7 @@ import {getAllService} from '@/api/ms_api'
 export default {
   name: 'Tree',
   props: {
-    filterArr: {
+    treeData: {
       type: Array,
       default: () => {
         return []
@@ -82,13 +83,16 @@ export default {
   },
   data() {
     return {
-      data: []
+      data: [],
+      defaultProps: {
+        label: 'name'
+      }
     }
   },
   computed: {
-    treeData() {
+    treeData1() {
       const data = this.data
-      const filterArrTemp = this.filterArr
+      const filterArrTemp = this.treeData
       const treeDataTemp = []
       if (filterArrTemp) {
         const ids = filterArrTemp.map(e => {
@@ -102,7 +106,7 @@ export default {
             if (flag) {
               const fath = {
                 id: e.id,
-                label: e.label,
+                name: e.name,
                 children: []
               }
               treeDataTemp.push(fath)
@@ -117,7 +121,7 @@ export default {
                   })
                   const chil = {
                     id: e2.id,
-                    label: e2.label,
+                    name: e2.name,
                     status: status,
                     enable: enable
                   }
@@ -136,7 +140,7 @@ export default {
               })
               const fath = {
                 id: e.id,
-                label: e.label,
+                name: e.name,
                 status: status,
                 enable: enable
               }
@@ -179,7 +183,7 @@ export default {
     console.log('beforeMount')
   },
   mounted() {
-    const ids = this.filterArr.map(e => {
+    const ids = this.treeData.map(e => {
       return e['id']
     })
     this.$refs.tree.setCheckedKeys(ids)
@@ -189,7 +193,7 @@ export default {
     console.log('beforeUpdate')
   },
   updated() {
-    const ids = this.filterArr.map(e => {
+    const ids = this.treeData.map(e => {
       return e['id']
     })
     this.$refs.tree.setCheckedKeys(ids)
@@ -203,7 +207,7 @@ export default {
   },
   methods: {
     getIds() {
-      return this.$refs.tree.getCheckedKeys(true, false)
+      return this.$refs.tree.getCheckedKeys(true)
     },
     getOwnerIds() {
       const ids = this.$refs.tree.getCheckedKeys(true, false)

@@ -15,14 +15,21 @@ export function getAllService() {
     })
 }
 
-export function getServiceDetails(id) {
+export function getServiceById(id) {
     return request({
         url: `/api/${id}`,
         method: 'get'
     })
 }
 
-export function getService() {
+export function getServiceDetailsById(id) {
+    return request({
+        url: `/api/details/${id}`,
+        method: 'get'
+    })
+}
+
+export function getServiceByUser() {
     return request({
         url: '/api/user',
         method: 'get'

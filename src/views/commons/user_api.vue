@@ -1,13 +1,12 @@
 <template>
   <el-container>
     <el-header>
-      <el-button type="primary" size="small" @click="updateService()">更新微服务信息</el-button>
-      <el-button v-show="tableData && tableData.length" size="small" @click="editAllAction()">{{ action.edit.message }}</el-button>
+      <el-button type="primary" size="small" @click="updateService()">返回用户列表</el-button>
       <el-button v-show="tableData && tableData.length" type="primary" size="small" @click="commonAllAction(action.look.code)">{{ action.look.message }}</el-button>
-      <el-button v-show="commonAllShow(status.join.code)" type="primary" size="small" @click="commonAllAction(action.join.code)">{{ action.join.message }}</el-button>
       <el-button v-show="commonAllShow(status.off.code)" type="success" size="small" @click="commonAllAction(action.on.code)">{{ action.on.message }}</el-button>
       <el-button v-show="commonAllShow(status.on.code)" type="warning" size="small" @click="commonAllAction(action.off.code)">{{ action.off.message }}</el-button>
-      <el-button v-show="commonAllShow(status.disabled.code)" type="danger" size="small" @click="commonAllAction(action.remove.code)">{{ action.remove.message }}</el-button>
+      <!-- <el-button v-show="commonAllShow(status.expire.code)" type="danger" size="small" @click="commonAllAction(action.remove.code)">{{ action.remove.message }}</el-button> -->
+      <el-button v-show="tableData && tableData.length" type="danger" size="small" @click="commonAllAction(action.remove.code)">{{ action.remove.message }}</el-button>      
     </el-header>
     <el-main>
       <el-table
@@ -33,10 +32,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="httpMethod" label="请求方式" align="center" min-width="80" />
-        <el-table-column prop="sensitiveNum" label="敏感级别" align="center" min-width="80" />
+        <el-table-column prop="applyTime" label="申请时间" align="center" min-width="200" />
+        <el-table-column prop="expireTime" label="到期时间" align="center" min-width="200" />
         <el-table-column
           prop="status"
-          label="接口状态"
+          label="用户接口关系状态"
           align="center"
           min-width="280"
         >
@@ -46,28 +46,30 @@
               <el-tag
                 :type="tag_type(scope.row)"
                 effect="dark">{{show(scope.row)}}</el-tag>
+              <span v-if="textShow(scope.row)">
+                <el-tooltip class="item" effect="dark" :content="text(scope.row)" placement="right">
+                  <el-tag
+                    type="danger"
+                    effect="dark">{{status.disabled.message}}</el-tag>
+                </el-tooltip>
+              </span>
             </span>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" align="center" width="427">
+        <!-- <el-table-column label="暂失效原因" align="center" min-width="150">
+          <template slot-scope="scope">
+            <span v-if="textShow(scope.row)">{{text(scope.row)}}</span>
+          </template>
+        </el-table-column> -->
+        <el-table-column fixed="right" label="操作" align="center" width="287">
           <template slot-scope="scope">
             <el-row>
-              <el-button
-                size="small"
-                @click="editAction(scope.row)"
-              >{{ action.edit.message }}</el-button>
               <el-button
                 v-if="scope.row.children"
                 type="primary"
                 size="small"
                 @click="commonAction(scope.row, action.look.code)"
               >{{ action.look.message }}</el-button>
-              <el-button
-                v-if="commonShow(scope.row, status.join.code)"
-                type="primary"
-                size="small"
-                @click="commonAction(scope.row, action.join.code)"
-              >{{ action.join.message }}</el-button>
               <el-button
                 v-if="commonShow(scope.row, status.off.code)"
                 type="success"
@@ -80,8 +82,8 @@
                 size="small"
                 @click="commonAction(scope.row, action.off.code)"
               >{{ action.off.message }}</el-button>
+              <!-- v-if="commonShow(scope.row, status.expire.code)" -->
               <el-button
-                v-if="commonShow(scope.row, status.disabled.code)"
                 type="danger"
                 size="small"
                 @click="commonAction(scope.row, action.remove.code)"
@@ -95,7 +97,6 @@
         <span slot="footer">
           <el-button size="small" @click="dialog=false">取消</el-button>
           <el-button v-show="dialogButtonShow(action.remove.code)" type="danger" size="small" @click="submit(action.remove.code)">{{ action.remove.message }}</el-button>
-          <el-button v-show="dialogButtonShow(action.join.code)" type="primary" size="small" @click="submit(action.join.code)">{{ action.join.message }}</el-button>
           <el-button v-show="dialogButtonShow(action.on.code)" type="success" size="small" @click="submit(action.on.code)">{{ action.on.message }}</el-button>
           <el-button v-show="dialogButtonShow(action.off.code)" type="warning" size="small" @click="submit(action.off.code)">{{ action.off.message }}</el-button>
         </span>
@@ -123,6 +124,8 @@
 import tree from './micro-service-tree'
 import apiInfo from './api-info-view'
 import {getAllService, joinService, delService, onService, offService, sensitiveService, updateService, getServiceDetailsById} from '@/api/ms_api'
+import {getUser} from '@/api/ms_user'
+import {getUserApi, onUserApi, offUserApi, delUserApi} from '@/api/ms_user_api'
 export default {
   components: {
     tree,
@@ -141,12 +144,12 @@ export default {
       apiInfoTitle: '接口详情信息',
       status: {
         disabled: {
-          code: -1,
-          message: '未生效'
+          code: -2,
+          message: '暂失效'
         },
-        join: {
-          code: 0,
-          message: '待接入'
+        expire: {
+          code: -1,
+          message: '已过期'
         },
         off: {
           code: 1,
@@ -161,14 +164,6 @@ export default {
         look: {
           code: 3,
           message: '查看'
-        },
-        edit: {
-          code: 4,
-          message: '修改'
-        },
-        join: {
-          code: 0,
-          message: '接入'
         },
         on: {
           code: 2,
@@ -189,103 +184,46 @@ export default {
       },
       // 批量更新需要记住row
       updateRow: undefined,
-      nowActionCode: 0
+      nowActionCode: 0,
+      user: {},
+      userApis: [],
+      apiIds: []
     }
   },
   inject: ['reload'],
   computed: {
     colorStatus() {
       return {
-        gray: this.status.disabled,
-        blue: this.status.join,
+        gray: this.status.expire,
         orange: this.status.off,
         green: this.status.on
       }
     }
+    // ,
+    // apiIds() {
+    //   return this.userApis.map(item => item.apiId)
+    // }
   },
   methods: {
     updateService(){
-      this.$prompt(
-        '网关地址',
-        '提示',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          inputValue: 'http://192.168.243.87:8080/v2/api-docs'
-        }
-      ).then(({ value }) => {
-        updateService(value).then(response => {
-          this.getList()
-          this.$message({
-            type: 'success',
-            message: '操作成功'
-          })
-        })
-      }).catch(() => {
-        
-      })
+      
     },
-    editAction(row) {
-      if(row.children){
-        let sensitiveNum = this.findMaxSens(row)
-        this.sensTitle = '更新当前微服务所有接口敏感级别'
-        if(row.id === -1){
-          this.sensTitle = '更新所有微服务所有接口敏感级别'
-        }
-        this.dialog2Form.sensitiveNum = sensitiveNum
-      }else{
-        this.sensTitle = '更新当前接口敏感级别'
-        this.dialog2Form.sensitiveNum = row.sensitiveNum
+    textShow(row){
+      if(row.children || row.apiStatus === 2 && row.sensitiveNum < row.userSensitiveNum || row.status === this.status.expire.code || row.status === this.status.off.code){
+        return false
       }
-      this.updateRow = row
-      this.dialog2 = true
+      return true
     },
-    editSensitive() {
-      const row = this.updateRow
-      const num = this.dialog2Form.sensitiveNum
-      const ids = []
-      if (row.children) {
-        this.findAllChildId(row, ids)
-      } else {
-        ids.push(row.id)
+    text(row){
+      if(row.apiStatus === 1){
+        return '接口已停用'
+      } else if(row.apiStatus === 0){
+        return '接口待接入'
+      } else if(row.apiStatus === -1){
+        return '接口未生效'
+      } else if(row.sensitiveNum > row.userSensitiveNum){
+        return '用户敏感级别不足'
       }
-      sensitiveService(num, ids).then(_ => {
-        this.$message({
-          type: 'success',
-          message: '操作成功'
-        })
-        this.getList()
-        this.dialog2 = false
-      })
-      .catch(res => {
-        if(res.code === 450){
-          this.getList()
-          this.dialog2 = false
-        }
-      })
-    },
-    editAllAction(){
-      let filter = {
-        name: '根节点',
-        id: -1,
-        children: this.tableData
-      }
-      this.editAction(filter)
-    },
-    findMaxSens(row){
-      let sensitiveNum = 0
-      row.children.forEach(e => {
-        if(e.children){
-          const sens = this.findMaxSens(e)
-          if(sens > sensitiveNum){
-            sensitiveNum = sens
-          }
-        }else{
-          if(e.sensitiveNum > sensitiveNum)
-            sensitiveNum = e.sensitiveNum
-        }
-      })
-      return sensitiveNum
     },
     findAllChildId(row, ids){
       row.children.forEach(e => {
@@ -317,14 +255,12 @@ export default {
       this.checkbox = false
       if(status !== this.action.look.code){
         let tempStatus
-        if(status === this.action.join.code){
-          tempStatus = this.status.join.code
-        }else if(status === this.action.on.code){
+        if(status === this.action.on.code){
           tempStatus = this.status.off.code
         }else if(status === this.action.off.code){
           tempStatus = this.status.on.code
         }else if(status === this.action.remove.code){
-          tempStatus = this.status.disabled.code
+          tempStatus = this.status.expire.code
         }
         this.checkbox = true
         filter = this.filterNode(
@@ -344,14 +280,12 @@ export default {
         this.checkbox = false
         if(status !== this.action.look.code){
           let tempStatus
-          if(status === this.action.join.code){
-            tempStatus = this.status.join.code
-          }else if(status === this.action.on.code){
+          if(status === this.action.on.code){
             tempStatus = this.status.off.code
           }else if(status === this.action.off.code){
             tempStatus = this.status.on.code
           }else if(status === this.action.remove.code){
-            tempStatus = this.status.disabled.code
+            tempStatus = this.status.expire.code
           }
           this.checkbox = true
           filter = this.filterNode(
@@ -366,35 +300,14 @@ export default {
         this.dialog = true
       } else {
         // 单条数据不展示树结构
-        if (status === this.action.join.code) {
-          this.$confirm('确认' + this.action.join.message, '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'info'
-          })
-            .then(_ => {
-              joinService([row.id]).then(_ => {
-                this.$message({
-                  type: 'success',
-                  message: '操作成功'
-                })
-                row.status = this.status.on.code
-              })
-              .catch(res => {
-                if(res.code === 450)
-                  this.getList()
-              })
-            })
-            .catch(action => {
-            })
-        } else if (status === this.action.off.code) {
+        if (status === this.action.off.code) {
           this.$confirm('确认' + this.action.off.message, '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'warning'
           })
             .then(_ => {
-              offService([row.id]).then(_ => {
+              offUserApi([{userId: row.userId, apiId: row.id}]).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
@@ -414,7 +327,7 @@ export default {
             type: 'success'
           })
             .then(_ => {
-              onService([row.id]).then(_ => {
+              onUserApi([{userId: row.userId, apiId: row.id}]).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
@@ -434,7 +347,7 @@ export default {
             type: 'error'
           })
             .then(_ => {
-              delService([row.id]).then(_ => {
+              delUserApi([{userId: row.userId, apiId: row.id}]).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
@@ -461,25 +374,11 @@ export default {
           },
           dataNodes
         )
-        if (status === this.action.join.code) {
-          joinService(ids).then(_ => {
-            this.$message({
-              type: 'success',
-              message: '操作成功'
-            })
-            dataNodes.forEach(e => {
-              e.status = this.status.on.code
-            })
-            this.dialog = false
-          })
-          .catch(res => {
-            if(res.code === 450){
-              this.getList()
-              this.dialog = false
-            }
-          })
-        } else if (status === this.action.on.code) {
-          onService(ids).then(_ => {
+        const userApiIds = dataNodes.map(row => {
+          return {userId: row.userId, apiId: row.id}
+        })
+        if (status === this.action.on.code) {
+          onUserApi(userApiIds).then(_ => {
             this.$message({
               type: 'success',
               message: '操作成功'
@@ -496,7 +395,7 @@ export default {
             }
           })
         } else if (status === this.action.off.code) {
-          offService(ids).then(_ => {
+          offUserApi(userApiIds).then(_ => {
             this.$message({
               type: 'success',
               message: '操作成功'
@@ -513,7 +412,7 @@ export default {
             }
           })
         } else if (status === this.action.remove.code) {
-          delService(ids).then(_ => {
+          delUserApi(userApiIds).then(_ => {
             this.$message({
               type: 'success',
               message: '操作成功'
@@ -549,6 +448,40 @@ export default {
       }else{
         if(fn(node)){
           return Object.assign({}, node)
+        }
+      }
+    },
+    buildNode(node){
+      if(node.children){
+        const nodeChildren = []
+        node.children.forEach(item => {
+          const tempNode = this.buildNode(item)
+          if(tempNode){
+            nodeChildren.push(tempNode)
+          }
+        })
+        if(nodeChildren && nodeChildren.length){
+          const tempNodeFa = Object.assign({}, node)
+          tempNodeFa.children = nodeChildren
+          return tempNodeFa
+        }
+      }else{
+        if(this.apiIds.indexOf(node.id) !== -1){
+          console.log('test', node)
+          const temp = Object.assign({}, node)
+          const status = temp.status
+          for(const v of this.userAPis){
+            if(v.apiId === temp.id){
+              temp.status = v.status
+              this.$set(temp, 'applyTime', v.applyTime)
+              this.$set(temp, 'expireTime', v.expireTime)
+              this.$set(temp, 'apiStatus', status)
+              this.$set(temp, 'userId', this.user.id)
+              this.$set(temp, 'userSensitiveNum', this.user.sensitiveNum)
+              break
+            }
+          }
+          return temp
         }
       }
     },
@@ -612,45 +545,37 @@ export default {
     show(row) {
       if (row.children) {
         const arr = row.children
-        let a = 0
         let b = 0
         let c = 0
         let d = 0
         arr.forEach(element => {
-          if (element.status === this.status.join.code) {
-            a++
-          } else if (element.status === this.status.on.code) {
+          if (element.status === this.status.on.code) {
             b++
           } else if (element.status === this.status.off.code) {
             c++
-          } else if (element.status === this.status.disabled.code) {
+          } else if (element.status === this.status.expire.code) {
             d++
           }
         })
-        return this.status.join.message + a + '、' +
-                this.status.on.message + b + '、' +
+        return this.status.on.message + b + '、' +
                 this.status.off.message + c + '、' +
-                this.status.disabled.message + d
+                this.status.expire.message + d
       } else {
-        if (row.status === this.status.join.code) {
-          return this.status.join.message
-        } else if (row.status === this.status.on.code) {
+        if (row.status === this.status.on.code) {
           return this.status.on.message
         } else if (row.status === this.status.off.code) {
           return this.status.off.message
-        } else if (row.status === this.status.disabled.code) {
-          return this.status.disabled.message
+        } else if (row.status === this.status.expire.code) {
+          return this.status.expire.message
         }
       }
     },
     tag_type(row){
-      if (row.status === this.status.join.code) {
-        return 'primary'
-      } else if (row.status === this.status.on.code) {
+      if (row.status === this.status.on.code) {
         return 'success'
       } else if (row.status === this.status.off.code) {
         return 'warning'
-      } else if (row.status === this.status.disabled.code) {
+      } else if (row.status === this.status.expire.code) {
         return 'info'
       }
     },
@@ -669,11 +594,43 @@ export default {
     },
     async getList(){
       this.loading = true
-      await getAllService().then(response => {
-        this.tableData = response.data
-      }).catch(_ => {
-      })
+      let userId = this.$route.params && this.$route.params.id
+      userId = 11
+      console.log(userId)
+      if(userId){
+        await getUser(userId).then(async response => {
+          const user = response.data
+          if(user){
+            this.user = user
+            await getUserApi(userId).then(async response => {
+              const userApis = response.data
+              if(userApis && userApis.length){
+                this.userAPis = userApis
+                this.apiIds = userApis.map(item => item.apiId)
+                await getAllService().then(response => {
+                  const tempData = response.data
+                  this.tableData = tempData.map(item => this.buildNode(item)).filter(item => item)
+                  console.log('查询结束')
+                }).catch(_ => {
+                  console.log('查询接口信息出现异常')
+                })
+              }
+            })
+          }
+        }).catch(_ => {
+          console.log('获取用户信息出现异常')
+        })
+      }else{
+        this.$message.error('操作异常')
+      }
+      console.log('loading结束')
       this.loading = false
+      // getAllService().then(response => {
+      //   this.tableData = response.data
+      //   this.loading = false
+      // }).catch(_ => {
+      //   this.loading = false
+      // })
     }
   },
   created() {

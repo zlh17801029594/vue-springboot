@@ -26,6 +26,7 @@
     </el-form>
 </template>
 <script>
+import { parseTime } from '@/utils'
 export default {
     name: 'info',
     props:{
@@ -79,7 +80,12 @@ export default {
                 const nodes = this.$refs.cascader.getCheckedNodes(true)
                 return  {
                     ids: nodes.map(node => node.data.id),
-                    expireTime: this.applyForm.datetime
+                    expireTime: parseTime(this.applyForm.datetime),
+                    applyDetailss: nodes.map(node => {
+                        return {
+                            apiId: node.data.id
+                        }
+                    })
                 }
             }
         }
@@ -139,6 +145,7 @@ export default {
             },
             props: { 
                 multiple: true,
+                label: 'name',
                 value: 'id'
             },
             selectedIds: this.selected,

@@ -477,18 +477,25 @@ export const asyncRoutes = [
     ]
   },
   {
-    path: '/ms_user_api',
+    path: '/ms_user',
     component: Layout,
     children: [
       {
         path: 'index',
         name: 'approve',
-        component: () => import('@/views/commons/ms_user_api'),
+        component: () => import('@/views/commons/ms_user'),
         meta: {
           title: '用户管理', 
           icon: 'component',
           roles: ['SUPER_ADMIN', 'ADMIN']
         }
+      },
+      {
+        path: 'editUserApi',
+        component: () => import('@/views/commons/user_api'),
+        name: 'editUserApi',
+        meta: { title: 'editUserApi', noCache: true, activeMenu: '/ms_user/index' },
+        hidden: true
       }
     ]
   },

@@ -1,15 +1,15 @@
 import request from '@/utils/request'
 
-export function getUserApi(){
+export function getUserApi(userId){
     return request({
-        url: '/user/all',
+        url: `/user-api/user/${userId}`,
         method: 'get'
     })
 }
 
 export function onUserApi(data){
     return request({
-        url: '/user_api/on',
+        url: '/user-api/on',
         method: 'post',
         data
     })
@@ -17,7 +17,7 @@ export function onUserApi(data){
 
 export function offUserApi(data){
     return request({
-        url: '/user_api/off',
+        url: '/user-api/off',
         method: 'post',
         data
     })
@@ -25,7 +25,7 @@ export function offUserApi(data){
 
 export function delUserApi(data){
     return request({
-        url: '/user_api/del',
+        url: '/user-api/del',
         method: 'post',
         data
     })
