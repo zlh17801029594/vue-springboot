@@ -11,23 +11,24 @@
     </el-header>
     <el-main>
       <el-table
-        :data="tableData"
         v-loading="loading"
+        :data="tableData"
         element-loading-text="加载中..."
         row-key="id"
         :indent="0"
         border
         highlight-current-row
+        default-expand-all
         style="width: 100%"
       >
         <el-table-column width="48" />
-        <el-table-column prop="name" label="微服务/接口名称" align="center" min-width="250" />
+        <el-table-column prop="name" label="微服务/接口名称" align="center" min-width="250" show-overflow-tooltip />
         <el-table-column label="类型" align="center" min-width="80">
           <template slot-scope="scope">
-            <el-tag>{{scope.row.children ? '微服务' : '接口'}}</el-tag>
+            <el-tag>{{ scope.row.children ? '微服务' : '接口' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="接口url" align="center" min-width="200">
+        <el-table-column label="接口url" align="center" min-width="200" show-overflow-tooltip>
           <template slot-scope="scope">
             <el-button type="text" @click="info(scope.row)">{{ scope.row.type ? scope.row.url : 'http://' + scope.row.host + scope.row.url }}</el-button>
           </template>
@@ -41,11 +42,12 @@
           min-width="280"
         >
           <template slot-scope="scope">
-            <span v-if="scope.row.children">{{show(scope.row)}}</span>
+            <span v-if="scope.row.children">{{ show(scope.row) }}</span>
             <span v-else>
               <el-tag
                 :type="tag_type(scope.row)"
-                effect="dark">{{show(scope.row)}}</el-tag>
+                effect="dark"
+              >{{ show(scope.row) }}</el-tag>
             </span>
           </template>
         </el-table-column>
@@ -91,7 +93,7 @@
         </el-table-column>
       </el-table>
       <el-dialog ref="dialog" :visible.sync="dialog" :center="true" width="500px">
-        <tree ref="tree" :treeData="filterArr" :checkbox="checkbox" :status="colorStatus" />
+        <tree ref="tree" :tree-data="filterArr" :checkbox="checkbox" :status="colorStatus" />
         <span slot="footer">
           <el-button size="small" @click="dialog=false">取消</el-button>
           <el-button v-show="dialogButtonShow(action.remove.code)" type="danger" size="small" @click="submit(action.remove.code)">{{ action.remove.message }}</el-button>
@@ -101,15 +103,15 @@
         </span>
       </el-dialog>
 
-      <el-dialog :visible.sync="dialog2" :title="sensTitle" width="400px" >
-        <el-form :model="dialog2Form" ref="dialog2Form" label-width="120px" label-position="left">
-          <el-form-item label="敏感级别" >
-            <el-input-number v-model="dialog2Form.sensitiveNum" controls-position="right" :min="0" :max="999"></el-input-number>
+      <el-dialog :visible.sync="dialog2" :title="sensTitle + '(0-999)'" width="400px">
+        <el-form ref="dialog2Form" :model="dialog2Form" label-width="120px" label-position="left">
+          <el-form-item label="敏感级别">
+            <el-input-number v-model="dialog2Form.sensitiveNum" controls-position="right" :min="0" :max="999" />
           </el-form-item>
         </el-form>
         <span slot="footer">
           <el-button size="small" @click="dialog2=false">取消</el-button>
-          <el-button type="primary" size="samll" @click="editSensitive()">确认</el-button>
+          <el-button type="primary" size="small" @click="editSensitive()">确认</el-button>
         </span>
       </el-dialog>
 
@@ -120,9 +122,9 @@
   </el-container>
 </template>
 <script>
-import tree from './micro-service-tree'
-import apiInfo from './api-info-view'
-import {getAllService, joinService, delService, onService, offService, sensitiveService, updateService, getServiceDetailsById} from '@/api/ms_api'
+import tree from '../micro-service-tree'
+import apiInfo from '../api-info-view'
+import { getUrl, getAllService, joinService, delService, onService, offService, sensitiveService, updateService, getServiceDetailsById } from '@/api/ms_api'
 export default {
   components: {
     tree,
@@ -189,7 +191,8 @@ export default {
       },
       // 批量更新需要记住row
       updateRow: undefined,
-      nowActionCode: 0
+      nowActionCode: 0,
+      url: undefined
     }
   },
   inject: ['reload'],
@@ -203,15 +206,25 @@ export default {
       }
     }
   },
+  created() {
+    this.getList()
+  },
   methods: {
-    updateService(){
+    async updateService() {
+      if (!this.url) {
+        await getUrl().then(response => {
+          this.url = response.data
+        }).catch(_ => {
+
+        })
+      }
       this.$prompt(
         '网关地址',
         '提示',
         {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
-          inputValue: 'http://192.168.243.87:8080/v2/api-docs'
+          inputValue: this.url
         }
       ).then(({ value }) => {
         updateService(value).then(response => {
@@ -220,20 +233,21 @@ export default {
             type: 'success',
             message: '操作成功'
           })
+          this.url = value
         })
       }).catch(() => {
-        
+
       })
     },
     editAction(row) {
-      if(row.children){
-        let sensitiveNum = this.findMaxSens(row)
+      if (row.children) {
+        const sensitiveNum = this.findMaxSens(row)
         this.sensTitle = '更新当前微服务所有接口敏感级别'
-        if(row.id === -1){
+        if (row.id === -1) {
           this.sensTitle = '更新所有微服务所有接口敏感级别'
         }
         this.dialog2Form.sensitiveNum = sensitiveNum
-      }else{
+      } else {
         this.sensTitle = '更新当前接口敏感级别'
         this.dialog2Form.sensitiveNum = row.sensitiveNum
       }
@@ -257,47 +271,46 @@ export default {
         this.getList()
         this.dialog2 = false
       })
-      .catch(res => {
-        if(res.code === 450){
-          this.getList()
-          this.dialog2 = false
-        }
-      })
+        .catch(res => {
+          if (res.code === 450) {
+            this.getList()
+            this.dialog2 = false
+          }
+        })
     },
-    editAllAction(){
-      let filter = {
+    editAllAction() {
+      const filter = {
         name: '根节点',
         id: -1,
         children: this.tableData
       }
       this.editAction(filter)
     },
-    findMaxSens(row){
+    findMaxSens(row) {
       let sensitiveNum = 0
       row.children.forEach(e => {
-        if(e.children){
+        if (e.children) {
           const sens = this.findMaxSens(e)
-          if(sens > sensitiveNum){
+          if (sens > sensitiveNum) {
             sensitiveNum = sens
           }
-        }else{
-          if(e.sensitiveNum > sensitiveNum)
-            sensitiveNum = e.sensitiveNum
+        } else {
+          if (e.sensitiveNum > sensitiveNum) { sensitiveNum = e.sensitiveNum }
         }
       })
       return sensitiveNum
     },
-    findAllChildId(row, ids){
+    findAllChildId(row, ids) {
       row.children.forEach(e => {
-        if(e.children){
+        if (e.children) {
           this.findAllChildId(e, ids)
-        }else{
+        } else {
           ids.push(e.id)
         }
       })
     },
-    commonAllShow(status){
-      if(this.tableData && this.tableData.length){
+    commonAllShow(status) {
+      if (this.tableData && this.tableData.length) {
         const flag = this.hasItem(
           this.tableData,
           item => {
@@ -308,22 +321,22 @@ export default {
       }
       return false
     },
-    commonAllAction(status){
+    commonAllAction(status) {
       let filter = {
         name: '根节点',
         id: -1,
         children: this.tableData
       }
       this.checkbox = false
-      if(status !== this.action.look.code){
+      if (status !== this.action.look.code) {
         let tempStatus
-        if(status === this.action.join.code){
+        if (status === this.action.join.code) {
           tempStatus = this.status.join.code
-        }else if(status === this.action.on.code){
+        } else if (status === this.action.on.code) {
           tempStatus = this.status.off.code
-        }else if(status === this.action.off.code){
+        } else if (status === this.action.off.code) {
           tempStatus = this.status.on.code
-        }else if(status === this.action.remove.code){
+        } else if (status === this.action.remove.code) {
           tempStatus = this.status.disabled.code
         }
         this.checkbox = true
@@ -342,15 +355,15 @@ export default {
       if (row.children) {
         let filter = row
         this.checkbox = false
-        if(status !== this.action.look.code){
+        if (status !== this.action.look.code) {
           let tempStatus
-          if(status === this.action.join.code){
+          if (status === this.action.join.code) {
             tempStatus = this.status.join.code
-          }else if(status === this.action.on.code){
+          } else if (status === this.action.on.code) {
             tempStatus = this.status.off.code
-          }else if(status === this.action.off.code){
+          } else if (status === this.action.off.code) {
             tempStatus = this.status.on.code
-          }else if(status === this.action.remove.code){
+          } else if (status === this.action.remove.code) {
             tempStatus = this.status.disabled.code
           }
           this.checkbox = true
@@ -380,10 +393,9 @@ export default {
                 })
                 row.status = this.status.on.code
               })
-              .catch(res => {
-                if(res.code === 450)
-                  this.getList()
-              })
+                .catch(res => {
+                  if (res.code === 450) { this.getList() }
+                })
             })
             .catch(action => {
             })
@@ -401,10 +413,9 @@ export default {
                 })
                 row.status = this.status.off.code
               })
-              .catch(res => {
-                if(res.code === 450)
-                  this.getList()
-              })
+                .catch(res => {
+                  if (res.code === 450) { this.getList() }
+                })
             })
             .catch(_ => {})
         } else if (status === this.action.on.code) {
@@ -421,10 +432,9 @@ export default {
                 })
                 row.status = this.status.on.code
               })
-              .catch(res => {
-                if(res.code === 450)
-                  this.getList()
-              })
+                .catch(res => {
+                  if (res.code === 450) { this.getList() }
+                })
             })
             .catch(_ => {})
         } else if (status === this.action.remove.code) {
@@ -441,10 +451,9 @@ export default {
                 })
                 this.getList()
               })
-              .catch(res => {
-                if(res.code === 450)
-                  this.getList()
-              })
+                .catch(res => {
+                  if (res.code === 450) { this.getList() }
+                })
             })
             .catch(_ => {})
         }
@@ -472,12 +481,12 @@ export default {
             })
             this.dialog = false
           })
-          .catch(res => {
-            if(res.code === 450){
-              this.getList()
-              this.dialog = false
-            }
-          })
+            .catch(res => {
+              if (res.code === 450) {
+                this.getList()
+                this.dialog = false
+              }
+            })
         } else if (status === this.action.on.code) {
           onService(ids).then(_ => {
             this.$message({
@@ -489,12 +498,12 @@ export default {
             })
             this.dialog = false
           })
-          .catch(res => {
-            if(res.code === 450){
-              this.getList()
-              this.dialog = false
-            }
-          })
+            .catch(res => {
+              if (res.code === 450) {
+                this.getList()
+                this.dialog = false
+              }
+            })
         } else if (status === this.action.off.code) {
           offService(ids).then(_ => {
             this.$message({
@@ -506,12 +515,12 @@ export default {
             })
             this.dialog = false
           })
-          .catch(res => {
-            if(res.code === 450){
-              this.getList()
-              this.dialog = false
-            }
-          })
+            .catch(res => {
+              if (res.code === 450) {
+                this.getList()
+                this.dialog = false
+              }
+            })
         } else if (status === this.action.remove.code) {
           delService(ids).then(_ => {
             this.$message({
@@ -521,33 +530,33 @@ export default {
             this.getList()
             this.dialog = false
           })
-          .catch(res => {
-            if(res.code === 450){
-              this.getList()
-              this.dialog = false
-            }
-          })
+            .catch(res => {
+              if (res.code === 450) {
+                this.getList()
+                this.dialog = false
+              }
+            })
         }
       } else {
         this.$alert('不能为空！')
       }
     },
-    filterNode(node, fn){
-      if(node.children){
+    filterNode(node, fn) {
+      if (node.children) {
         const nodeChildren = []
         node.children.forEach(item => {
           const tempNode = this.filterNode(item, fn)
-          if(tempNode){
+          if (tempNode) {
             nodeChildren.push(tempNode)
           }
         })
-        if(nodeChildren && nodeChildren.length){
+        if (nodeChildren && nodeChildren.length) {
           const tempNodeFa = Object.assign({}, node)
           tempNodeFa.children = nodeChildren
           return tempNodeFa
         }
-      }else{
-        if(fn(node)){
+      } else {
+        if (fn(node)) {
           return Object.assign({}, node)
         }
       }
@@ -584,7 +593,7 @@ export default {
             const i = arr.indexOf(item)
             arr.splice(i, 1)
             return true
-          }else{
+          } else {
             return this.removeItem(item.children, fn)
           }
         } else {
@@ -600,12 +609,12 @@ export default {
       return status === this.nowActionCode
     },
     commonShow(row, status) {
-      if(row.children){
+      if (row.children) {
         const flag = row.children.some(item => {
           return item.status === status
         })
         return flag
-      }else{
+      } else {
         return row.status === status
       }
     },
@@ -643,7 +652,7 @@ export default {
         }
       }
     },
-    tag_type(row){
+    tag_type(row) {
       if (row.status === this.status.join.code) {
         return 'primary'
       } else if (row.status === this.status.on.code) {
@@ -655,19 +664,19 @@ export default {
       }
     },
     async info(row) {
-      if(row.type && !row.apiDetails){
+      if (row.type && !row.apiDetails) {
         await getServiceDetailsById(row.id).then(response => {
           this.$set(row, 'apiDetails', response.data)
         })
       }
       this.apiInfoTitle = '接口详情信息'
-      if(!row.type){
+      if (!row.type) {
         this.apiInfoTitle = '微服务详情信息'
       }
       this.api = row
       this.dialog3 = true
     },
-    async getList(){
+    async getList() {
       this.loading = true
       await getAllService().then(response => {
         this.tableData = response.data
@@ -675,9 +684,6 @@ export default {
       })
       this.loading = false
     }
-  },
-  created() {
-    this.getList()
   }
 }
 </script>

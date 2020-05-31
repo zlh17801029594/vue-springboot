@@ -9,7 +9,7 @@
 </template>
 
 <script>
-import tabPane from './ms_apply_panel'
+import tabPane from './apply_panel'
 
 export default {
   components: { tabPane },

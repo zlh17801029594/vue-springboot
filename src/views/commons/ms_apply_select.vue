@@ -1,5 +1,17 @@
 <template>
-  <div>
+  <div class="app-container">
+    <div class="filter-container">
+      <el-input v-model="listQuery.data.username" placeholder="用户名" clearable style="width: 200px; margin: 0" class="filter-item" @keyup.enter.native="handleFilter" />
+      <el-select v-model="listQuery.data.status" placeholder="申请状态" clearable class="filter-item" style="width: 130px; margin: 0">
+        <el-option v-for="item in statusOptions" :key="item.key" :label="item.label" :value="item.key" />
+      </el-select>
+      <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" style="margin: 0" @click="handleFilter">
+        查询
+      </el-button>
+      <el-button v-waves class="filter-item" type="primary" icon="el-icon-refresh-left" style="margin: 0" @click="resetFilter">
+        重置
+      </el-button>
+    </div>
     <el-table
       v-loading="loading"
       :data="tableData"
@@ -31,7 +43,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column v-if="type === 'disabled'" prop="reason" label="失效原因" align="center" min-width="300" />
+      <el-table-column v-if="true || type === 'disabled'" prop="reason" label="失效原因" align="center" min-width="300" />
       <el-table-column fixed="right" label="操作" align="center" width="161">
         <template slot-scope="scope">
           <el-button
@@ -71,7 +83,8 @@
         <el-table-column label="接口名称" prop="apiName" align="center" min-width="100" show-overflow-tooltip />
         <el-table-column label="接口url" align="center" min-width="150" show-overflow-tooltip>
           <template slot-scope="scope">
-            <el-button type="text" @click="info(scope.row)">{{ scope.row.apiUrl }}</el-button>
+            <el-button v-if="scope.row.apiId" type="text" @click="info(scope.row)">{{ scope.row.apiUrl }}</el-button>
+            <el-button v-else type="text">{{ scope.row.apiUrl }}</el-button>
           </template>
         </el-table-column>
         <el-table-column label="请求方式" prop="apiHttpMethod" align="center" min-width="100" />
@@ -94,13 +107,12 @@
     </el-dialog>
   </div>
 </template>
+
 <script>
-import tree from './micro-service-tree'
+import waves from '@/directive/waves' // waves directive
 import apiInfo from './api-info-view'
-import { getUserApi } from '@/api/ms_user_api'
 import { getServiceById } from '@/api/ms_api'
 import { getAllApply, passApply, denyApply, passApplySome, delApply } from '@/api/ms_apply'
-import { mapGetters } from 'vuex'
 import Pagination from '@/components/Pagination'
 const applyStyle = {
   '1': 'warning',
@@ -125,10 +137,17 @@ const passSomeStatus = {
   'false': '拒绝',
   'true': '通过'
 }
+const statusOptions = [
+  { label: '待审批', key: 0 },
+  { label: '全部通过', key: 3 },
+  { label: '部分通过', key: 2 },
+  { label: '未通过', key: 1 },
+  { label: '已过期', key: -1 },
+  { label: '已失效', key: -2 }
+]
 export default {
-  name: 'TabPane',
+  directives: { waves },
   components: {
-    tree,
     apiInfo,
     Pagination
   },
@@ -144,12 +163,6 @@ export default {
     },
     filterStatus(status) {
       return passSomeStatus[status]
-    }
-  },
-  props: {
-    type: {
-      type: String,
-      default: 'approve'
     }
   },
   data() {
@@ -213,17 +226,15 @@ export default {
         page: 1,
         limit: 20,
         data: {
-          status: 0
+          username: undefined,
+          status: undefined
         }
       },
-      loading: true
+      loading: true,
+      statusOptions
     }
   },
-  inject: ['reload'],
   computed: {
-    status1() {
-      return this.status[this.type].code
-    },
     buttonStyle() {
       return this.selection.length === this.apiData.length
     },
@@ -243,13 +254,7 @@ export default {
           type: 'success',
           message: '操作成功'
         })
-        // row.status = this.status.deny.code
-        this.removeItem(
-          this.tableData,
-          item => {
-            return item.id === this.key
-          }
-        )
+        this.getList()
         this.dialog = false
       })
         .catch(res => {
@@ -267,12 +272,7 @@ export default {
             type: 'success',
             message: '操作成功'
           })
-          this.removeItem(
-            this.tableData,
-            item => {
-              return item.id === this.key
-            }
-          )
+          this.getList()
           this.dialog = false
         }).catch(res => {
           if (res.code === 450) {
@@ -296,12 +296,7 @@ export default {
             type: 'success',
             message: '操作成功'
           })
-          this.removeItem(
-            this.tableData,
-            item => {
-              return item.id === this.key
-            }
-          )
+          this.getList()
           this.dialog = false
         }).catch(res => {
           if (res.code === 450) {
@@ -359,12 +354,14 @@ export default {
               type: 'success',
               message: '操作成功'
             })
-            this.removeItem(
-              this.tableData,
-              item => {
-                return item.id === row.id
-              }
-            )
+            const page = Math.ceil((this.total - 1) / this.listQuery.limit)
+            console.log(page)
+            console.log(this.listQuery.page)
+            console.log(this.listQuery)
+            if (page && page < this.listQuery.page) {
+              this.listQuery.page = page
+            }
+            this.getList()
           })
             .catch(res => {
               if (res.code === 450) { this.getList() }
@@ -376,10 +373,21 @@ export default {
       this.passSome = false
       done()
     },
+    handleFilter() {
+      this.listQuery.page = 1
+      if (!this.listQuery.data.username) {
+        this.listQuery.data.username = undefined
+      }
+      this.getList()
+    },
+    resetFilter() {
+      this.listQuery.page = 1
+      this.listQuery.data.username = undefined
+      this.listQuery.data.status = undefined
+      this.getList()
+    },
     async getList() {
       this.loading = true
-      this.listQuery.data.status = this.status1
-      console.log(this.listQuery)
       await getAllApply(this.listQuery).then(response => {
         this.tableData = response.data.list
         this.total = response.data.total
@@ -441,14 +449,10 @@ export default {
       if (!row.api) {
         await getServiceById(row.apiId).then(response => {
           this.$set(row, 'api', response.data)
-        }).catch(_ => {
-
         })
       }
       this.api = row.api
-      if (this.api) {
-        this.dialog2 = true
-      }
+      this.dialog2 = true
     }
   }
 }

@@ -1,32 +1,34 @@
 <template>
   <el-container>
     <el-header>
-      <el-button type="primary" size="small" @click="updateService()">返回用户列表</el-button>
+      <el-button type="primary" size="small" @click="$router.replace('/ms_user/index')">返回用户列表</el-button>
       <el-button v-show="tableData && tableData.length" type="primary" size="small" @click="commonAllAction(action.look.code)">{{ action.look.message }}</el-button>
       <el-button v-show="commonAllShow(status.off.code)" type="success" size="small" @click="commonAllAction(action.on.code)">{{ action.on.message }}</el-button>
       <el-button v-show="commonAllShow(status.on.code)" type="warning" size="small" @click="commonAllAction(action.off.code)">{{ action.off.message }}</el-button>
-      <!-- <el-button v-show="commonAllShow(status.expire.code)" type="danger" size="small" @click="commonAllAction(action.remove.code)">{{ action.remove.message }}</el-button> -->
-      <el-button v-show="tableData && tableData.length" type="danger" size="small" @click="commonAllAction(action.remove.code)">{{ action.remove.message }}</el-button>      
+      <el-button v-show="commonAllShow(action.remove.code)" type="danger" size="small" @click="commonAllAction(action.remove.code)">{{ action.remove.message }}</el-button>
+      <!-- <el-button v-show="tableData && tableData.length" type="danger" size="small" @click="commonAllAction(action.remove.code)">{{ action.remove.message }}</el-button>       -->
     </el-header>
     <el-main>
       <el-table
-        :data="tableData"
         v-loading="loading"
+        :data="tableData"
         element-loading-text="加载中..."
         row-key="id"
         :indent="0"
         border
         highlight-current-row
+        :row-class-name="tableRowClassName"
+        default-expand-all
         style="width: 100%"
       >
         <el-table-column width="48" />
-        <el-table-column prop="name" label="微服务/接口名称" align="center" min-width="250" />
+        <el-table-column prop="name" label="微服务/接口名称" align="center" min-width="250" show-overflow-tooltip />
         <el-table-column label="类型" align="center" min-width="80">
           <template slot-scope="scope">
-            <el-tag>{{scope.row.children ? '微服务' : '接口'}}</el-tag>
+            <el-tag>{{ scope.row.children ? '微服务' : '接口' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="接口url" align="center" min-width="200">
+        <el-table-column label="接口url" align="center" min-width="200" show-overflow-tooltip>
           <template slot-scope="scope">
             <el-button type="text" @click="info(scope.row)">{{ scope.row.type ? scope.row.url : 'http://' + scope.row.host + scope.row.url }}</el-button>
           </template>
@@ -41,16 +43,18 @@
           min-width="280"
         >
           <template slot-scope="scope">
-            <span v-if="scope.row.children">{{show(scope.row)}}</span>
+            <span v-if="scope.row.children">{{ show(scope.row) }}</span>
             <span v-else>
               <el-tag
                 :type="tag_type(scope.row)"
-                effect="dark">{{show(scope.row)}}</el-tag>
+                effect="dark"
+              >{{ show(scope.row) }}</el-tag>
               <span v-if="textShow(scope.row)">
                 <el-tooltip class="item" effect="dark" :content="text(scope.row)" placement="right">
                   <el-tag
                     type="danger"
-                    effect="dark">{{status.disabled.message}}</el-tag>
+                    effect="dark"
+                  >{{ status.disabled.message }}</el-tag>
                 </el-tooltip>
               </span>
             </span>
@@ -84,6 +88,7 @@
               >{{ action.off.message }}</el-button>
               <!-- v-if="commonShow(scope.row, status.expire.code)" -->
               <el-button
+                v-if="commonShow(scope.row, action.remove.code)"
                 type="danger"
                 size="small"
                 @click="commonAction(scope.row, action.remove.code)"
@@ -93,7 +98,7 @@
         </el-table-column>
       </el-table>
       <el-dialog ref="dialog" :visible.sync="dialog" :center="true" width="500px">
-        <tree ref="tree" :treeData="filterArr" :checkbox="checkbox" :status="colorStatus" />
+        <tree ref="tree" :tree-data="filterArr" :checkbox="checkbox" :status="colorStatus" />
         <span slot="footer">
           <el-button size="small" @click="dialog=false">取消</el-button>
           <el-button v-show="dialogButtonShow(action.remove.code)" type="danger" size="small" @click="submit(action.remove.code)">{{ action.remove.message }}</el-button>
@@ -102,15 +107,15 @@
         </span>
       </el-dialog>
 
-      <el-dialog :visible.sync="dialog2" :title="sensTitle" width="400px" >
-        <el-form :model="dialog2Form" ref="dialog2Form" label-width="120px" label-position="left">
-          <el-form-item label="敏感级别" >
-            <el-input-number v-model="dialog2Form.sensitiveNum" controls-position="right" :min="0" :max="999"></el-input-number>
+      <el-dialog :visible.sync="dialog2" :title="sensTitle" width="400px">
+        <el-form ref="dialog2Form" :model="dialog2Form" label-width="120px" label-position="left">
+          <el-form-item label="敏感级别">
+            <el-input-number v-model="dialog2Form.sensitiveNum" controls-position="right" :min="0" :max="999" />
           </el-form-item>
         </el-form>
         <span slot="footer">
           <el-button size="small" @click="dialog2=false">取消</el-button>
-          <el-button type="primary" size="samll" @click="editSensitive()">确认</el-button>
+          <el-button type="primary" size="small" @click="editSensitive()">确认</el-button>
         </span>
       </el-dialog>
 
@@ -121,11 +126,11 @@
   </el-container>
 </template>
 <script>
-import tree from './micro-service-tree'
-import apiInfo from './api-info-view'
-import {getAllService, joinService, delService, onService, offService, sensitiveService, updateService, getServiceDetailsById} from '@/api/ms_api'
-import {getUser} from '@/api/ms_user'
-import {getUserApi, onUserApi, offUserApi, delUserApi} from '@/api/ms_user_api'
+import tree from '../micro-service-tree'
+import apiInfo from '../api-info-view'
+import { getAllService, joinService, delService, onService, offService, sensitiveService, updateService, getServiceDetailsById } from '@/api/ms_api'
+import { getUser } from '@/api/ms_user'
+import { getUserApi, onUserApi, offUserApi, delUserApi } from '@/api/ms_user_api'
 export default {
   components: {
     tree,
@@ -187,7 +192,8 @@ export default {
       nowActionCode: 0,
       user: {},
       userApis: [],
-      apiIds: []
+      apiIds: [],
+      tempRoute: {}
     }
   },
   inject: ['reload'],
@@ -204,96 +210,112 @@ export default {
     //   return this.userApis.map(item => item.apiId)
     // }
   },
+  created() {
+    this.tempRoute = Object.assign({}, this.$route)
+    this.getList()
+  },
   methods: {
-    updateService(){
-      
+    updateService() {
+
     },
-    textShow(row){
-      if(row.children || row.apiStatus === 2 && row.sensitiveNum < row.userSensitiveNum || row.status === this.status.expire.code || row.status === this.status.off.code){
+    textShow(row) {
+      if (row.children || row.apiStatus === 2 && row.sensitiveNum <= row.userSensitiveNum || row.status === this.status.expire.code || row.status === this.status.off.code) {
         return false
       }
       return true
     },
-    text(row){
-      if(row.apiStatus === 1){
+    text(row) {
+      if (row.apiStatus === 1) {
         return '接口已停用'
-      } else if(row.apiStatus === 0){
+      } else if (row.apiStatus === 0) {
         return '接口待接入'
-      } else if(row.apiStatus === -1){
+      } else if (row.apiStatus === -1) {
         return '接口未生效'
-      } else if(row.sensitiveNum > row.userSensitiveNum){
+      } else if (row.sensitiveNum > row.userSensitiveNum) {
         return '用户敏感级别不足'
       }
     },
-    findAllChildId(row, ids){
+    findAllChildId(row, ids) {
       row.children.forEach(e => {
-        if(e.children){
+        if (e.children) {
           this.findAllChildId(e, ids)
-        }else{
+        } else {
           ids.push(e.id)
         }
       })
     },
-    commonAllShow(status){
-      if(this.tableData && this.tableData.length){
-        const flag = this.hasItem(
-          this.tableData,
-          item => {
-            return item.status === status
-          }
-        )
-        return flag
-      }
-      return false
-    },
-    commonAllAction(status){
-      let filter = {
+    commonAllShow(status) {
+      const row = {
         name: '根节点',
         id: -1,
         children: this.tableData
       }
-      this.checkbox = false
-      if(status !== this.action.look.code){
-        let tempStatus
-        if(status === this.action.on.code){
-          tempStatus = this.status.off.code
-        }else if(status === this.action.off.code){
-          tempStatus = this.status.on.code
-        }else if(status === this.action.remove.code){
-          tempStatus = this.status.expire.code
+      return this.commonShow(row, status)
+    },
+    commonShow(row, status) {
+      if (row.children) {
+        if (status !== this.action.remove.code) {
+          const flag = this.hasItem(
+            row.children,
+            item => {
+              return item.status === status
+            }
+          )
+          return flag
+        } else {
+          const flag = this.hasItem(
+            row.children,
+            item => {
+              return item.status === this.status.off.code || item.status === this.status.expire.code
+            }
+          )
+          return flag
         }
-        this.checkbox = true
-        filter = this.filterNode(
-          filter,
-          item => {
-            return item.status === tempStatus
-          }
-        )
+      } else {
+        if (status === this.action.remove.code) {
+          return row.status === this.status.off.code || row.status === this.status.expire.code
+        }
+        return row.status === status
       }
-      this.filterArr = [filter]
-      this.nowActionCode = status
-      this.dialog = true
+    },
+    commonAllAction(status) {
+      const row = {
+        name: '根节点',
+        id: -1,
+        children: this.tableData
+      }
+      this.commonAction(row, status)
     },
     commonAction(row, status) {
       if (row.children) {
         let filter = row
         this.checkbox = false
-        if(status !== this.action.look.code){
-          let tempStatus
-          if(status === this.action.on.code){
-            tempStatus = this.status.off.code
-          }else if(status === this.action.off.code){
-            tempStatus = this.status.on.code
-          }else if(status === this.action.remove.code){
-            tempStatus = this.status.expire.code
-          }
-          this.checkbox = true
-          filter = this.filterNode(
-            row,
-            item => {
-              return item.status === tempStatus
+        if (status !== this.action.look.code) {
+          if (status !== this.action.remove.code) {
+            let tempStatus
+            if (status === this.action.on.code) {
+              tempStatus = this.status.off.code
+            } else if (status === this.action.off.code) {
+              tempStatus = this.status.on.code
+            } else if (status === this.action.remove.code) {
+              tempStatus = this.status.expire.code
             }
-          )
+            this.checkbox = true
+            filter = this.filterNode(
+              row,
+              item => {
+                return item.status === tempStatus
+              }
+            )
+          } else {
+            this.checkbox = true
+            filter = this.filterNode(
+              row,
+              item => {
+                return item.status === this.status.off.code || item.status === this.status.expire.code
+              }
+            )
+          }
         }
         this.filterArr = [filter]
         this.nowActionCode = status
@@ -307,17 +329,16 @@ export default {
             type: 'warning'
           })
             .then(_ => {
-              offUserApi([{userId: row.userId, apiId: row.id}]).then(_ => {
+              offUserApi([{ userId: row.userId, apiId: row.id }]).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
                 })
                 row.status = this.status.off.code
               })
-              .catch(res => {
-                if(res.code === 450)
-                  this.getList()
-              })
+                .catch(res => {
+                  if (res.code === 450) { this.getList() }
+                })
             })
             .catch(_ => {})
         } else if (status === this.action.on.code) {
@@ -327,17 +348,16 @@ export default {
             type: 'success'
           })
             .then(_ => {
-              onUserApi([{userId: row.userId, apiId: row.id}]).then(_ => {
+              onUserApi([{ userId: row.userId, apiId: row.id }]).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
                 })
                 row.status = this.status.on.code
               })
-              .catch(res => {
-                if(res.code === 450)
-                  this.getList()
-              })
+                .catch(res => {
+                  if (res.code === 450) { this.getList() }
+                })
             })
             .catch(_ => {})
         } else if (status === this.action.remove.code) {
@@ -347,17 +367,16 @@ export default {
             type: 'error'
           })
             .then(_ => {
-              delUserApi([{userId: row.userId, apiId: row.id}]).then(_ => {
+              delUserApi([{ userId: row.userId, apiId: row.id }]).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
                 })
                 this.getList()
               })
-              .catch(res => {
-                if(res.code === 450)
-                  this.getList()
-              })
+                .catch(res => {
+                  if (res.code === 450) { this.getList() }
+                })
             })
             .catch(_ => {})
         }
@@ -375,7 +394,7 @@ export default {
           dataNodes
         )
         const userApiIds = dataNodes.map(row => {
-          return {userId: row.userId, apiId: row.id}
+          return { userId: row.userId, apiId: row.id }
         })
         if (status === this.action.on.code) {
           onUserApi(userApiIds).then(_ => {
@@ -388,12 +407,12 @@ export default {
             })
             this.dialog = false
           })
-          .catch(res => {
-            if(res.code === 450){
-              this.getList()
-              this.dialog = false
-            }
-          })
+            .catch(res => {
+              if (res.code === 450) {
+                this.getList()
+                this.dialog = false
+              }
+            })
         } else if (status === this.action.off.code) {
           offUserApi(userApiIds).then(_ => {
             this.$message({
@@ -405,12 +424,12 @@ export default {
             })
             this.dialog = false
           })
-          .catch(res => {
-            if(res.code === 450){
-              this.getList()
-              this.dialog = false
-            }
-          })
+            .catch(res => {
+              if (res.code === 450) {
+                this.getList()
+                this.dialog = false
+              }
+            })
         } else if (status === this.action.remove.code) {
           delUserApi(userApiIds).then(_ => {
             this.$message({
@@ -420,58 +439,58 @@ export default {
             this.getList()
             this.dialog = false
           })
-          .catch(res => {
-            if(res.code === 450){
-              this.getList()
-              this.dialog = false
-            }
-          })
+            .catch(res => {
+              if (res.code === 450) {
+                this.getList()
+                this.dialog = false
+              }
+            })
         }
       } else {
         this.$alert('不能为空！')
       }
     },
-    filterNode(node, fn){
-      if(node.children){
+    filterNode(node, fn) {
+      if (node.children) {
         const nodeChildren = []
         node.children.forEach(item => {
           const tempNode = this.filterNode(item, fn)
-          if(tempNode){
+          if (tempNode) {
             nodeChildren.push(tempNode)
           }
         })
-        if(nodeChildren && nodeChildren.length){
+        if (nodeChildren && nodeChildren.length) {
           const tempNodeFa = Object.assign({}, node)
           tempNodeFa.children = nodeChildren
           return tempNodeFa
         }
-      }else{
-        if(fn(node)){
+      } else {
+        if (fn(node)) {
           return Object.assign({}, node)
         }
       }
     },
-    buildNode(node){
-      if(node.children){
+    buildNode(node) {
+      if (node.children) {
         const nodeChildren = []
         node.children.forEach(item => {
           const tempNode = this.buildNode(item)
-          if(tempNode){
+          if (tempNode) {
             nodeChildren.push(tempNode)
           }
         })
-        if(nodeChildren && nodeChildren.length){
+        if (nodeChildren && nodeChildren.length) {
           const tempNodeFa = Object.assign({}, node)
           tempNodeFa.children = nodeChildren
           return tempNodeFa
         }
-      }else{
-        if(this.apiIds.indexOf(node.id) !== -1){
+      } else {
+        if (this.apiIds.indexOf(node.id) !== -1) {
           console.log('test', node)
           const temp = Object.assign({}, node)
           const status = temp.status
-          for(const v of this.userAPis){
-            if(v.apiId === temp.id){
+          for (const v of this.userAPis) {
+            if (v.apiId === temp.id) {
               temp.status = v.status
               this.$set(temp, 'applyTime', v.applyTime)
               this.$set(temp, 'expireTime', v.expireTime)
@@ -517,7 +536,7 @@ export default {
             const i = arr.indexOf(item)
             arr.splice(i, 1)
             return true
-          }else{
+          } else {
             return this.removeItem(item.children, fn)
           }
         } else {
@@ -531,16 +550,6 @@ export default {
     },
     dialogButtonShow(status) {
       return status === this.nowActionCode
-    },
-    commonShow(row, status) {
-      if(row.children){
-        const flag = row.children.some(item => {
-          return item.status === status
-        })
-        return flag
-      }else{
-        return row.status === status
-      }
     },
     show(row) {
       if (row.children) {
@@ -570,7 +579,7 @@ export default {
         }
       }
     },
-    tag_type(row){
+    tag_type(row) {
       if (row.status === this.status.on.code) {
         return 'success'
       } else if (row.status === this.status.off.code) {
@@ -579,32 +588,38 @@ export default {
         return 'info'
       }
     },
+    tableRowClassName({ row, rowIndex }) {
+      if (row.children || row.apiStatus === 2 && row.sensitiveNum <= row.userSensitiveNum) {
+        return ''
+      }
+      return 'expire-row'
+    },
     async info(row) {
-      if(row.type && !row.apiDetails){
+      if (row.type && !row.apiDetails) {
         await getServiceDetailsById(row.id).then(response => {
           this.$set(row, 'apiDetails', response.data)
         })
       }
       this.apiInfoTitle = '接口详情信息'
-      if(!row.type){
+      if (!row.type) {
         this.apiInfoTitle = '微服务详情信息'
       }
       this.api = row
       this.dialog3 = true
     },
-    async getList(){
+    async getList() {
       this.loading = true
-      let userId = this.$route.params && this.$route.params.id
-      userId = 11
+      const userId = this.$route.params && this.$route.params.id
       console.log(userId)
-      if(userId){
+      if (userId) {
         await getUser(userId).then(async response => {
           const user = response.data
-          if(user){
+          if (user) {
             this.user = user
+            this.setTagsViewTitle()
             await getUserApi(userId).then(async response => {
               const userApis = response.data
-              if(userApis && userApis.length){
+              if (userApis && userApis.length) {
                 this.userAPis = userApis
                 this.apiIds = userApis.map(item => item.apiId)
                 await getAllService().then(response => {
@@ -614,13 +629,19 @@ export default {
                 }).catch(_ => {
                   console.log('查询接口信息出现异常')
                 })
+              } else {
+                this.tableData = []
               }
+            }).catch(_ => {
+
             })
+          } else {
+            this.$message.error('用户不存在')
           }
         }).catch(_ => {
-          console.log('获取用户信息出现异常')
+          console.log('获取用户信息异常')
         })
-      }else{
+      } else {
         this.$message.error('操作异常')
       }
       console.log('loading结束')
@@ -631,10 +652,12 @@ export default {
       // }).catch(_ => {
       //   this.loading = false
       // })
+    },
+    setTagsViewTitle() {
+      const title = '用户接口管理'
+      const route = Object.assign({}, this.tempRoute, { title: `${title}-${this.user.username}` })
+      this.$store.dispatch('tagsView/updateVisitedView', route)
     }
-  },
-  created() {
-    this.getList()
   }
 }
 </script>
@@ -644,5 +667,8 @@ export default {
 }
 .el-main {
   padding: 0 20px;
+}
+.el-table .expire-row {
+  background: rgb(233, 233, 235);
 }
 </style>

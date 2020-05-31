@@ -44,7 +44,7 @@
   </el-container>
 </template>
 <script>
-import {getAllService} from '@/api/ms_api'
+import { getAllService } from '@/api/ms_api'
 export default {
   name: 'Tree',
   props: {
@@ -90,69 +90,6 @@ export default {
     }
   },
   computed: {
-    treeData1() {
-      const data = this.data
-      const filterArrTemp = this.treeData
-      const treeDataTemp = []
-      if (filterArrTemp) {
-        const ids = filterArrTemp.map(e => {
-          return e['id']
-        })
-        data.forEach(e => {
-          if (e.children) {
-            const flag = e.children.some(e1 => {
-              return ids.indexOf(e1.id) !== -1
-            })
-            if (flag) {
-              const fath = {
-                id: e.id,
-                name: e.name,
-                children: []
-              }
-              treeDataTemp.push(fath)
-              e.children.forEach(e2 => {
-                if (ids.indexOf(e2.id) !== -1) {
-                  let status,enable
-                  filterArrTemp.forEach(e3 => {
-                    if (e3.id === e2.id) {
-                      status = e3['status']
-                      enable = e3['enable']
-                    }
-                  })
-                  const chil = {
-                    id: e2.id,
-                    name: e2.name,
-                    status: status,
-                    enable: enable
-                  }
-                  fath.children.push(chil)
-                }
-              })
-            }
-          } else {
-            if (ids.indexOf(e.id) !== -1) {
-              let status,enable
-              filterArrTemp.forEach(e1 => {
-                if (e1.id === e.id) {
-                  status = e1['status']
-                  enable = e3['enable']
-                }
-              })
-              const fath = {
-                id: e.id,
-                name: e.name,
-                status: status,
-                enable: enable
-              }
-              treeDataTemp.push(fath)
-            }
-          }
-        })
-      }
-      console.log(this.filterArr)
-      console.log(treeDataTemp)
-      return treeDataTemp
-    }
   },
   watch: {
     filterArr(newVal, oldVal) {
@@ -242,10 +179,10 @@ export default {
   }
   .tree /deep/ .el-tree-node {
     position: relative;
-    padding-left: 16px;
+    /* padding-left: 16px; */
   }
   .tree /deep/ .el-tree-node__children {
-    padding-left: 16px;
+    padding-left: 32px;
   }
   .tree /deep/ .el-tree-node :last-child:before {
     height: 38px;
@@ -261,14 +198,14 @@ export default {
   }
   .tree /deep/ .el-tree-node:before {
     content: "";
-    left: -4px;
+    left: -20px;
     position: absolute;
     right: auto;
     border-width: 1px;
   }
   .tree /deep/ .el-tree-node:after {
     content: "";
-    left: -4px;
+    left: -20px;
     position: absolute;
     right: auto;
     border-width: 1px;

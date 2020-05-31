@@ -18,7 +18,7 @@
       />
       <el-table-column prop="applyTime" label="申请时间" align="center" min-width="200" />
       <el-table-column prop="expireTime" label="到期时间" align="center" min-width="200" />
-      <el-table-column prop="username" label="申请用户" align="center" min-width="100" />
+      <!-- <el-table-column prop="username" label="申请用户" align="center" min-width="100" /> -->
       <el-table-column
         prop="status"
         label="申请状态"
@@ -32,25 +32,13 @@
         </template>
       </el-table-column>
       <el-table-column v-if="type === 'disabled'" prop="reason" label="失效原因" align="center" min-width="300" />
-      <el-table-column fixed="right" label="操作" align="center" width="161">
+      <el-table-column fixed="right" label="操作" align="center" width="77">
         <template slot-scope="scope">
           <el-button
             type="primary"
             size="small"
             @click="look(scope.row)"
           >{{ action.look.message }}</el-button>
-          <el-button
-            v-if="commonShow(scope.row, 0)"
-            type="primary"
-            size="small"
-            @click="approve(scope.row)"
-          >{{ action.approve.message }}</el-button>
-          <el-button
-            v-if="scope.row.status !== 0"
-            type="danger"
-            size="small"
-            @click="remove(scope.row)"
-          >{{ action.remove.message }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -71,7 +59,8 @@
         <el-table-column label="接口名称" prop="apiName" align="center" min-width="100" show-overflow-tooltip />
         <el-table-column label="接口url" align="center" min-width="150" show-overflow-tooltip>
           <template slot-scope="scope">
-            <el-button type="text" @click="info(scope.row)">{{ scope.row.apiUrl }}</el-button>
+            <el-button v-if="scope.row.apiId" type="text" @click="info(scope.row)">{{ scope.row.apiUrl }}</el-button>
+            <el-button v-else type="text">{{ scope.row.apiUrl }}</el-button>
           </template>
         </el-table-column>
         <el-table-column label="请求方式" prop="apiHttpMethod" align="center" min-width="100" />
@@ -95,11 +84,10 @@
   </div>
 </template>
 <script>
-import tree from './micro-service-tree'
-import apiInfo from './api-info-view'
+import apiInfo from '../api-info-view'
 import { getUserApi } from '@/api/ms_user_api'
 import { getServiceById } from '@/api/ms_api'
-import { getAllApply, passApply, denyApply, passApplySome, delApply } from '@/api/ms_apply'
+import { getAllApply, getAllApplyByUser, passApply, denyApply, passApplySome, delApply } from '@/api/ms_apply'
 import { mapGetters } from 'vuex'
 import Pagination from '@/components/Pagination'
 const applyStyle = {
@@ -128,7 +116,6 @@ const passSomeStatus = {
 export default {
   name: 'TabPane',
   components: {
-    tree,
     apiInfo,
     Pagination
   },
@@ -347,31 +334,6 @@ export default {
       this.apiData = row.applyDetailss
       this.dialog = true
     },
-    remove(row) {
-      this.$confirm('确认' + this.action.remove.message, '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'error'
-      })
-        .then(_ => {
-          delApply(row.id).then(_ => {
-            this.$message({
-              type: 'success',
-              message: '操作成功'
-            })
-            this.removeItem(
-              this.tableData,
-              item => {
-                return item.id === row.id
-              }
-            )
-          })
-            .catch(res => {
-              if (res.code === 450) { this.getList() }
-            })
-        })
-        .catch(_ => {})
-    },
     closeDialog(done) {
       this.passSome = false
       done()
@@ -380,18 +342,96 @@ export default {
       this.loading = true
       this.listQuery.data.status = this.status1
       console.log(this.listQuery)
-      await getAllApply(this.listQuery).then(response => {
+      await getAllApplyByUser(this.listQuery).then(response => {
         this.tableData = response.data.list
         this.total = response.data.total
       }).catch(_ => {
       })
       this.loading = false
     },
+    commonAction(row, status) {
+      const idStatus = []
+      if (status === this.action.approve.code) {
+        this.$confirm(this.action.approve.message + '用户申请', '提示', {
+          distinguishCancelAndClose: true,
+          confirmButtonText: this.action.pass.message,
+          cancelButtonText: this.action.deny.message,
+          type: 'info',
+          center: 'true'
+        })
+          .then(_ => {
+            passApply(row.id).then(_ => {
+              this.$message({
+                type: 'success',
+                message: '操作成功'
+              })
+              this.removeItem(
+                this.tableData,
+                item => {
+                  return item.id === row.id
+                }
+              )
+            })
+              .catch(res => {
+                if (res.code === 450) { this.getList() }
+              })
+          })
+          .catch(action => {
+            if (action === 'cancel') {
+              denyApply(row.id).then(_ => {
+                this.$message({
+                  type: 'success',
+                  message: '操作成功'
+                })
+                // row.status = this.status.deny.code
+                this.removeItem(
+                  this.tableData,
+                  item => {
+                    return item.id === row.id
+                  }
+                )
+              })
+                .catch(res => {
+                  if (res.code === 450) { this.getList() }
+                })
+            }
+          })
+      } else if (status === this.action.remove.code) {
+        this.$confirm('确认' + this.action.remove.message, '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'error'
+        })
+          .then(_ => {
+            delApply(row.id).then(_ => {
+              this.$message({
+                type: 'success',
+                message: '操作成功'
+              })
+              this.removeItem(
+                this.tableData,
+                item => {
+                  return item.id === row.id
+                }
+              )
+            })
+              .catch(res => {
+                if (res.code === 450) { this.getList() }
+              })
+          })
+          .catch(_ => {})
+      }
+    },
     removeItem(arr, fn) {
-      arr.forEach(item => {
-        if (fn(item)) {
-          const i = arr.indexOf(item)
-          arr.splice(i, 1)
+      return arr.some(item => {
+        if (item.children) {
+          return this.removeItem(item.children, fn)
+        } else {
+          if (fn(item)) {
+            const i = arr.indexOf(item)
+            arr.splice(i, 1)
+            return true
+          }
         }
       })
     },
@@ -441,14 +481,10 @@ export default {
       if (!row.api) {
         await getServiceById(row.apiId).then(response => {
           this.$set(row, 'api', response.data)
-        }).catch(_ => {
-
         })
       }
       this.api = row.api
-      if (this.api) {
-        this.dialog2 = true
-      }
+      this.dialog2 = true
     }
   }
 }

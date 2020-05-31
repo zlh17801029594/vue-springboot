@@ -13,6 +13,9 @@
         mode="vertical"
       >
         <sidebar-item v-for="route in permission_routes" :key="route.path" :item="route" :base-path="route.path" />
+        <div class="menu-wrapper">
+          <el-menu-item><a href="#" @click="back"><svg-icon icon-class="link" /><span slot="title">返回门户</span></a></el-menu-item>
+        </div>
       </el-menu>
     </el-scrollbar>
   </div>
@@ -23,6 +26,14 @@ import { mapGetters } from 'vuex'
 import Logo from './Logo'
 import SidebarItem from './SidebarItem'
 import variables from '@/styles/variables.scss'
+
+let baseURL = process.env.VUE_APP_BASE_API
+if (!baseURL.endsWith('/')) {
+  baseURL = baseURL + '/'
+}
+if (baseURL.startsWith('/')) {
+  baseURL = baseURL.substring(baseURL.length - 1)
+}
 
 export default {
   components: { SidebarItem, Logo },
@@ -48,6 +59,11 @@ export default {
     },
     isCollapse() {
       return !this.sidebar.opened
+    }
+  },
+  methods: {
+    back() {
+      location.href = baseURL + 'sso/index'
     }
   }
 }
