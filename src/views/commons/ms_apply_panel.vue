@@ -71,7 +71,8 @@
         <el-table-column label="接口名称" prop="apiName" align="center" min-width="100" show-overflow-tooltip />
         <el-table-column label="接口url" align="center" min-width="150" show-overflow-tooltip>
           <template slot-scope="scope">
-            <el-button type="text" @click="info(scope.row)">{{ scope.row.apiUrl }}</el-button>
+            <el-button v-if="scope.row.apiId" type="text" @click="info(scope.row)">{{ scope.row.apiUrl }}</el-button>
+            <span v-else style="font-size: 14px; line-height: 36px">{{ scope.row.apiUrl }}</span>
           </template>
         </el-table-column>
         <el-table-column label="请求方式" prop="apiHttpMethod" align="center" min-width="100" />

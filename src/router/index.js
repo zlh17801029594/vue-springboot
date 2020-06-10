@@ -208,6 +208,31 @@ export const asyncRoutes1 = [
     ]
   },
 
+  // {
+  //   path: '/fixm',
+  //   component: Layout,
+  //   redirect: 'noRedirect',
+  //   name: 'fixm',
+  //   meta: {
+  //     title: 'FIXM管理',
+  //     icon: 'component'
+  //   },
+  //   children: [
+  //     {
+  //       path: 'version4.2',
+  //       component: () => import('@/views/commons/admin/fixm'),
+  //       name: 'version4.2',
+  //       meta: { title: 'version4.2', noCache: true }
+  //     },
+  //     {
+  //       path: 'version4.1',
+  //       component: () => import('@/views/commons/admin/fixm_ztree'),
+  //       name: 'version4.1',
+  //       meta: { title: 'version4.1', noCache: true }
+  //     }
+  //   ]
+  // },
+
   // 404 page must be placed at the end !!!
   // { path: '*', redirect: '/404', hidden: true }
   { path: '*', redirect: '/', hidden: true }
