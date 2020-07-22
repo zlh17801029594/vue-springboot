@@ -33,7 +33,7 @@ export default {
   },
   methods: {
     getList1() {
-      getFixm().then(response => {
+      getFixm('core4.2').then(response => {
         this.treeData = response.data
       })
     },

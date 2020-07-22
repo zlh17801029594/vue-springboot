@@ -7,7 +7,7 @@ import { getToken } from '@/utils/auth'
 const service = axios.create({
   baseURL: process.env.VUE_APP_BASE_API, // url = base url + request url
   // withCredentials: true, // send cookies when cross-domain requests
-  timeout: 5000 // request timeout
+  timeout: 50000 // request timeout
 })
 
 let baseURL = process.env.VUE_APP_BASE_API
@@ -76,6 +76,8 @@ service.interceptors.response.use(
           location.href = baseURL + 'sso/login?referer=' + location.href
           return
         })
+      } else if (res.code === 606) {
+        // 验证异常
       } else {
         Message({
           message: res.message || 'Error',
@@ -83,8 +85,9 @@ service.interceptors.response.use(
           duration: 5 * 1000
         })
       }
-      //return Promise.reject(new Error(res.message || 'Error'))
+      // return Promise.reject(new Error(res.message || 'Error'))
       return Promise.reject(res)
+      // return res
     } else {
       return res
     }
