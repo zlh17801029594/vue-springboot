@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-container>
+    <el-container v-loading="loading" :element-loading-text="text">
       <el-header align="left" style="height: 40px; line-height: 36px; padding: 0; padding-bottom: 4px">
         <el-col :span="12">
           <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" />
@@ -12,7 +12,7 @@
           <el-button type="primary" size="small" :disabled="!isDeleteNode" @click="handleDeleteNode">删除</el-button>
         </el-col>
       </el-header>
-      <el-container v-loading="loading" element-loading-text="验证中..." style="height: calc(100vh - 164px); padding: 0">
+      <el-container style="height: calc(100vh - 164px); padding: 0">
         <el-aside style="width: 50%; padding: 0; margin: 0; background: #FFF;">
           <el-card style="min-height: 100%">
             <ul id="ztree" class="ztree" />
@@ -43,7 +43,16 @@
               </el-form-item>
               <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
                 <el-col :span="12">
-                  <el-input v-show="inputShow" v-model="form.testvalue" />
+                  <div v-show="inputShow">
+                    <el-input v-if="analyInput() === 'String'" v-model="upperTestValue" />
+                    <el-input v-else-if="analyInput() === 'Integer' || analyInput() === 'Long'" v-model.number="numberTestValue" />
+                    <el-select v-else-if="analyInput() === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
+                      <el-option label="true" :value="true" />
+                      <el-option label="false" :value="false" />
+                    </el-select>
+                    <el-date-picker type="datetime" v-else-if="analyInput() === 'Date'" value-format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: 100%" />
+                    <el-input v-else :disabled="true" />
+                  </div>
                   <span v-show="!inputShow">{{ form.testvalue }}</span>
                 </el-col>
               </el-form-item>
@@ -91,7 +100,7 @@
   </div>
 </template>
 <script>
-import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map } from '@/api/fixm'
+import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm } from '@/api/fixm'
 const version = 'core4.1'
 const split_sign = '->'
 export default {
@@ -150,18 +159,41 @@ export default {
           { required: true, message: '请选择类型', trigger: 'change' }
         ]
       },
-      keys: [],
+      columnsDesc: [],
       map: {},
-      loading: false
+      loading: false,
+      text: ''
     }
   },
   computed: {
     inputShow() {
       return this.addShow || this.editShow
+    },
+    upperTestValue: {
+      get: function() {
+        return this.form.testvalue
+      },
+      set: function(val) {
+        this.form.testvalue = val.toUpperCase()
+      }
+    },
+    numberTestValue: {
+      get: function() {
+        return this.form.testvalue
+      },
+      set: function(val) {
+        if (val === '') {
+          val = undefined
+        }
+        this.form.testvalue = val
+      }
+    },
+    keys() {
+      return this.columnsDesc.map(item => item.name)
     }
   },
   watch: {
-    treeNode(treeNode) {
+    treeNode() {
       this.info()
     },
     'form.srcColumn'(value) {
@@ -172,6 +204,18 @@ export default {
     this.getList()
   },
   methods: {
+    // 计算当前输入框类型
+    analyInput() {
+      const srcColumn = this.form.srcColumn
+      if (srcColumn) {
+        for (const v of this.columnsDesc) {
+          if (v.name === srcColumn) {
+            return v.javaType
+          }
+        }
+      }
+      return false
+    },
     // 增加多层级子节点时注意 isnode应该为true(第一层级)
     addChildIndex(treeNode, isnode) {
       let items
@@ -278,15 +322,16 @@ export default {
     },
     // 转换多层级节点
     buildNode(nodes, fixmLogic) {
-      const parent = nodes.shift()
+      const name = nodes.shift()
       if (nodes && nodes.length > 0) {
         const child = this.buildNode(nodes, fixmLogic)
         return {
-          name: parent,
+          name: name,
           isnode: true,
           children: [child]
         }
       } else {
+        fixmLogic.name = name
         return fixmLogic
       }
     },
@@ -317,13 +362,45 @@ export default {
         return treeNode
       }
     },
+    hasSrcColumn(treeNode) {
+      const isParent = treeNode.isParent
+      const srcColumn = treeNode.srcColumn
+      if (isParent) {
+        const children = treeNode.children
+        return children.some(item => {
+          return this.hasSrcColumn(item)
+        })
+      } else {
+        if (srcColumn) {
+          return true
+        } else {
+          return false
+        }
+      }
+    },
+    recurisionTreeData(treeNode, level) {
+      const children = treeNode.children
+      if (children && level < 5) {
+        treeNode.open = true
+        children.forEach(item => {
+          this.recurisionTreeData(item, level + 1)
+        })
+      }
+    },
     getList() {
       getFixm(version).then(response => {
+        console.log(response)
         this.treeData = response.data
+        // 当只有一个节点时，操作很流畅，因此是zTree导致的
+        // this.treeData = [{name: 'xiaozhou'}]
+        // this.loading = true
+        // this.text = '加载中...'
+        this.treeData.forEach(item => this.recurisionTreeData(item, 1))
         this.initTree()
+        // this.loading = false
       })
       keys(version).then(response => {
-        this.keys = response.data
+        this.columnsDesc = response.data
       })
       map(version).then(response => {
         this.map = response.data
@@ -382,6 +459,43 @@ export default {
         isvalid: true
       }
     },
+    updateMap(srcColumn, testvalue) {
+      if (srcColumn) {
+        this.map[srcColumn] = testvalue
+      }
+    },
+    validateFixm() {
+      // 提示验证
+      this.$confirm('是否立即验证', '提示', {
+        confirmButtonText: '立即验证',
+        cancelButtonText: '稍后验证',
+        type: 'success'
+      }).then(_ => {
+        console.log('立即验证')
+        setTimeout(() => {
+          this.loading = true
+          this.text = '验证中...'
+          validateFixm(version).then(response => {
+            this.loading = false
+            this.$alert('验证成功', '验证结果', {
+              confirmButtonText: '确定',
+              type: 'success'
+            })
+          }).catch(res => {
+            this.loading = false
+            if (res.code === 450) {
+              this.getList()
+            } else if (res.code === 606) {
+              this.$alert('失败原因：' + res.message, '验证结果', {
+                confirmButtonText: '确定',
+              })
+            }
+          })
+        }, 50)
+      }).catch(_ => {
+        console.log('稍后验证')
+      })
+    },
     handleAddNode() {
       this.resetShow()
       const parentName = this.treeNode.name
@@ -419,58 +533,50 @@ export default {
           }
           const nodeOrder = this.convertOrder(nodeOrderChildName)
           const propertyOrder = this.convertOrder(propertyOrderChildName)
-          const fixmLogic = {
-            fatherXsdnode: fatherXsdnode,
-            name: tempData.name,
-            srcColumn: tempData.srcColumn ? tempData.srcColumn : undefined,
-            isnode: tempData.isnode,
-            explain: tempData.explain ? tempData.explain : undefined,
-            testvalue: tempData.testvalue ? tempData.testvalue : undefined,
-            fileextension: tempData.fileextension ? tempData.fileextension : undefined,
-            convextension: tempData.convextension ? tempData.convextension : undefined,
-            isvalid: tempData.isvalid,
-            nodeOrder: nodeOrder,
-            propertyOrder: propertyOrder
-          }
-          this.$confirm('确认添加', '提示', {
+          // 后台接口参数
+          tempData.fatherXsdnode = fatherXsdnode
+          tempData.nodeOrder = nodeOrder
+          tempData.propertyOrder = propertyOrder
+          this.$confirm('确认添加：[' + tempData.name + ']', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'success'
           }).then(_ => {
-            this.$confirm('是否验证', '提示', {
-              confirmButtonText: '验证',
-              cancelButtonText: '稍后验证',
-              type: 'success'
-            }).then(_ => {
-              this.loading = true
-              addFixm(version, fixmLogic).then(response => {
-                const fixmData = response.data
-                console.log('fixmData', fixmData)
-                const nodes = tempData.name.split('->')
-                const node = this.buildNode(nodes, fixmData)
-                // 添加节点位置
-                const index = this.addChildIndex(treeNode, isnode)
-                zTree.addNodes(treeNode, index, node)
-                // 刷新树节点
-                zTree.refresh()
-                this.$message({
-                  type: 'success',
-                  message: '操作成功'
-                })
-                this.loading = false
-              }).catch(res => {
-                this.loading = false
-                if (res.code === 450) {
-                  this.getList()
-                } else if (res.code === 606) {
-                  this.$confirm('失败原因：' + res.message, '验证失败', {
-                    confirmButtonText: '保存',
-                    cancelButtonText: '不保存',
-                    type: 'success'
-                  })
-                }
+            addFixm(version, tempData).then(_ => {
+              this.$message({
+                type: 'success',
+                message: '操作成功'
               })
-            }).catch(_ => {
+              // 用于判断 更新map、验证fixm
+              const srcColumn = this.form.srcColumn
+              const testvalue = this.form.testvalue
+              const name = this.form.name
+              const nodes = name.split('->')
+              let node
+              if (nodes.length == 1) {
+                node = this.form
+              } else {
+                node = this.buildNode(nodes, this.form)
+              }
+              // 添加节点位置
+              const index = this.addChildIndex(treeNode, isnode)
+              zTree.addNodes(treeNode, index, node)
+              // 刷新树节点
+              // zTree.refresh()
+
+              // testvalue更新 转换为=>更新map值
+              this.updateMap(srcColumn, testvalue)
+              // 操作界面置空（或者调用 this.info() 展示详情信息）
+              // this.treeNode = null
+              this.info()
+              // 验证
+              if (srcColumn) {
+                this.validateFixm()
+              }
+            }).catch(res => {
+              if (res.code === 450) {
+                this.getList()
+              }
             })
           }).catch(_ => {
           })
@@ -512,26 +618,31 @@ export default {
             nodeOrder = this.convertOrder(nodeOrderChildName)
             propertyOrder = this.convertOrder(propertyOrderChildName)
           }
-          const fixmLogic = {}
           if (treeNode.isParent) {
-            fixmLogic.xsdnode = xsdnode
-            fixmLogic.newName = tempData.name
-            fixmLogic.nodeOrder = nodeOrder
-            fixmLogic.propertyOrder = propertyOrder
-            this.$confirm('确认更新', '提示', {
+            tempData.xsdnode = xsdnode
+            tempData.newName = tempData.name
+            tempData.nodeOrder = nodeOrder
+            tempData.propertyOrder = propertyOrder
+            this.$confirm('确认更新：[' + treeNode.name + ']', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'success'
             }).then(_ => {
-              updateFixmName(version, fixmLogic).then(_ => {
-                treeNode.name = tempData.name
-                zTree.updateNode(treeNode)
-                // 刷新树节点
-                zTree.refresh()
+              updateFixmName(version, tempData).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
                 })
+                treeNode.name = this.form.name
+                zTree.updateNode(treeNode)
+                // 刷新树节点
+                // zTree.refresh()
+                // 操作界面置空（或者调用 this.info() 展示详情信息）
+                // this.treeNode = null
+                this.info()
+                if (this.hasSrcColumn(treeNode)) {
+                  this.validateFixm()
+                }
               }).catch(res => {
                 if (res.code === 450) {
                   this.getList()
@@ -540,37 +651,34 @@ export default {
             }).catch(_ => {
             })
           } else {
-            fixmLogic.xsdnode = xsdnode
-            fixmLogic.newName = tempData.name
-            fixmLogic.isnode = tempData.isnode
-            fixmLogic.srcColumn = tempData.srcColumn
-            fixmLogic.explain = tempData.explain
-            fixmLogic.testvalue = tempData.testvalue
-            fixmLogic.fileextension = tempData.fileextension
-            fixmLogic.convextension = tempData.convextension
-            fixmLogic.isvalid = tempData.isvalid
-            fixmLogic.nodeOrder = nodeOrder
-            fixmLogic.propertyOrder = propertyOrder
-            this.$confirm('确认更新', '提示', {
+            tempData.xsdnode = xsdnode
+            tempData.newName = tempData.name
+            tempData.nodeOrder = nodeOrder
+            tempData.propertyOrder = propertyOrder
+            this.$confirm('确认更新：[' + treeNode.name + ']', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'success'
             }).then(_ => {
-              updateFixm(version, fixmLogic).then(_ => {
-                treeNode.name = tempData.name
-                treeNode.srcColumn = tempData.srcColumn
-                treeNode.explain = tempData.explain
-                treeNode.testvalue = tempData.testvalue
-                treeNode.fileextension = tempData.fileextension
-                treeNode.convextension = tempData.convextension
-                treeNode.isvalid = tempData.isvalid
-                zTree.updateNode(treeNode)
-                // 刷新树节点
-                zTree.refresh()
+              updateFixm(version, tempData).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
                 })
+                // 用于判断 更新map、验证fixm
+                const srcColumn = this.form.srcColumn
+                const testvalue = this.form.testvalue
+                Object.assign(treeNode, this.form)
+                zTree.updateNode(treeNode)
+                // 刷新树节点
+                // zTree.refresh()
+                
+                this.updateMap(srcColumn, testvalue)
+                // info在更新map后面有利于展示
+                this.info()
+                if (srcColumn) {
+                  this.validateFixm()
+                }
               }).catch(res => {
                 if (res.code === 450) {
                   this.getList()
@@ -707,8 +815,30 @@ export default {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'success'
-      }).then(_ => {
+      }).then(async _ => {
+        let deleteNode, deleteXsdnode
+        let saveFather = this.saveFather(sourceNode)
+        // if (saveFather) {
+        //   const blankFather = this.blankFather(sourceNode.getParentNode())
+        //   await this.$confirm('是否删除空白目录：[' + blankFather.name + ']', '提示', {
+        //     confirmButtonText: '删除',
+        //     cancelButtonText: '保留',
+        //     type: 'warning'
+        //   }).then(_ => {
+        //     // 删除空目录，生成deleteXsdnode
+        //     deleteNode = blankFather
+        //     deleteXsdnode = this.buildXsdnode(blankFather)
+        //     // 无需保留父节点
+        //     saveFather = false
+        //   }).catch(_ => {
+        //     // 保留空目录，返回值重要
+        //     // fixmLogic.saveFather = true
+        //   })
+        //   console.log('is save')
+        // }
         drawFixm(version, {
+          deleteXsdnode: deleteXsdnode,
+          saveFather: saveFather,
           xsdnode: xsdnode,
           newFatherXsdnode: newFatherXsdnode,
           nodeOrder: nodeOrder,
@@ -716,17 +846,26 @@ export default {
           newNodeOrder: newNodeOrder,
           newPropertyOrder: newPropertyOrder
         }).then(response => {
-          zTree.moveNode(targetNode, treeNodes[0], moveType)
-          // 刷新树节点
-          // zTree.refresh()
-          console.log(fathNode)
-          // setTimeout(() => {
-          //   zTree.refresh()
-          // }, 100)
           this.$message({
             type: 'success',
             message: '操作成功'
           })
+          // 拖拽节点
+          zTree.moveNode(targetNode, treeNodes[0], moveType)
+          // 删除空节点
+          if (deleteNode) {
+            zTree.removeNode(deleteNode, false)
+          }
+          // 刷新树节点
+          // zTree.refresh()
+          console.log(fathNode)
+
+          // 操作界面置空（或者调用 this.info() 展示详情信息）
+          this.treeNode = null
+          // this.info()
+          if (this.hasSrcColumn(sourceNode)) {
+            this.validateFixm()
+          }
         }).catch(res => {
           if (res.code === 450) {
             this.getList()
@@ -736,32 +875,33 @@ export default {
       })
     },
     async handleDeleteNode() {
-      await this.$confirm('确认删除', '提示', {
+      const zTree = $.fn.zTree.getZTreeObj('ztree')
+      let treeNode = this.treeNode
+      const isParent = treeNode.isParent
+      let message = '确认删除：[' + treeNode.name + ']'
+      if (isParent) {
+        message += '及其子节点'
+      }
+      await this.$confirm(message, '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'error'
       }).then(async _ => {
-        const zTree = $.fn.zTree.getZTreeObj('ztree')
-        let treeNode = this.treeNode
-        // 提交后台数据
-        const fixmLogic = {}
-        const saveFather = this.saveFather(treeNode)
+        let saveFather = this.saveFather(treeNode)
         if (saveFather) {
-          await this.$confirm('是否保留空目录', '提示', {
-            distinguishCancelAndClose: true,
-            confirmButtonText: '保留',
-            cancelButtonText: '删除',
-            type: 'info'
+          const blankFather = this.blankFather(treeNode.getParentNode())
+          await this.$confirm('是否删除空白目录：[' + blankFather.name + ']', '提示', {
+            confirmButtonText: '删除',
+            cancelButtonText: '保留',
+            type: 'warning'
           }).then(_ => {
+            // 删除空目录，删除节点更改
+            treeNode = blankFather
+            // 无需保留父节点
+            saveFather = false
+          }).catch(_ => {
             // 保留空目录，返回值重要
             // fixmLogic.saveFather = true
-          }).catch(action => {
-            // 删除空目录，删除节点更改
-            if (action === 'cancel') {
-              treeNode = this.blankFather(treeNode.getParentNode())
-            } else {
-              return
-            }
           })
           console.log('is save')
         }
@@ -785,21 +925,23 @@ export default {
         }
         const nodeOrder = this.convertOrder(nodeOrderChildName)
         const propertyOrder = this.convertOrder(propertyOrderChildName)
-        const fixmLogicTemp = {
+        // 提交后台数据
+        const fixmLogic = {
           xsdnode: xsdnode,
           nodeOrder: nodeOrder,
           propertyOrder: propertyOrder,
           saveFather: saveFather
         }
-        Object.assign(fixmLogic, fixmLogicTemp)
         delFixm(version, fixmLogic).then(_ => {
-          zTree.removeNode(treeNode, false)
-          // 刷新树节点
-          zTree.refresh()
           this.$message({
             type: 'success',
             message: '操作成功'
           })
+          zTree.removeNode(treeNode, false)
+          // 刷新树节点
+          // zTree.refresh()
+          
+          this.treeNode = null
         }).catch(res => {
           if (res.code === 450) {
             this.getList()
@@ -855,7 +997,7 @@ export default {
             delFixm(version, fixmLogic).then(_ => {
               zTree.removeNode(treeNode, false)
               // 刷新树节点
-              zTree.refresh()
+              // zTree.refresh()
               // console.log(fatshNode)
               this.$message({
                 type: 'success',
@@ -914,7 +1056,7 @@ export default {
           delFixm(version, fixmLogic).then(_ => {
             zTree.removeNode(treeNode, false)
             // 刷新树节点
-            zTree.refresh()
+            // zTree.refresh()
             this.$message({
               type: 'success',
               message: '操作成功'
@@ -1069,12 +1211,16 @@ export default {
         return { 'color': 'red' }
       }
       function onClick(event, treeId, treeNode) {
+        console.log('onClick', treeNode.name)
         _this.treeNode = treeNode
       }
       const zNodes = _this.treeData
+      console.log('2')
       $.fn.zTree.init($('#ztree'), setting, zNodes)
+      console.log('3')
       const ztree = $.fn.zTree.getZTreeObj('ztree')
-      ztree.expandAll(true)
+      // ztree.expandAll(true)
+      console.log('4')
       // false 过滤不加颜色不高亮提示
       fuzzySearch('ztree', '#key', false, true) // 初始化模糊搜索方法
     }

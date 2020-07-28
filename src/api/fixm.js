@@ -60,3 +60,10 @@ export function map(version) {
     method: 'get'
   })
 }
+
+export function validateFixm(version) {
+  return request({
+    url: `/fixmlogic/${version}/validate`,
+    method: 'get'
+  })
+}
