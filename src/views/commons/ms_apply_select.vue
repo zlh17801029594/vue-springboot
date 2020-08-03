@@ -44,7 +44,7 @@
         </template>
       </el-table-column>
       <el-table-column v-if="true || type === 'disabled'" prop="reason" label="失效原因" align="center" min-width="300" />
-      <el-table-column fixed="right" label="操作" align="center" width="161">
+      <el-table-column fixed="right" label="操作" align="center" width="147">
         <template slot-scope="scope">
           <el-button
             type="primary"

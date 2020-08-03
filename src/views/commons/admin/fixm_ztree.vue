@@ -1,109 +1,135 @@
 <template>
-  <div class="app-container">
-    <el-container v-loading="loading" :element-loading-text="text">
-      <el-header align="left" style="height: 40px; line-height: 36px; padding: 0; padding-bottom: 4px">
-        <el-col :span="12">
+  <el-container v-loading="loading" :element-loading-text="text">
+    <el-header align="left" style="height: 40px; line-height: 0; padding: 0; padding-bottom: 4px">
+      <el-col :span="12">
+        <el-form label-position="left" inline label-width="80px" class="inlineform">
+          <el-form-item>
+            <el-cascader
+              v-model="validateFile"
+              :options="validateFileOptions"
+              :props="{ expandTrigger: 'hover', value: 'name', label: 'name' }"
+              @change="handleChange">
+            </el-cascader>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="1">指定验证文件</el-button>
+          </el-form-item>
+        </el-form>
+      </el-col>
+      <el-col :span="12" style="padding: 0 20px">
+        <el-button type="primary" v-show="addRootShow" @click="handleAddRootNode" style="margin: 0;">添加根节点</el-button>
+        <el-button type="primary" :disabled="!isAddNode || addShow" @click="handleAddNode" style="margin: 0;">添加子节点</el-button>
+        <el-button type="primary" :disabled="!isUpdateNode || editShow" @click="handleUpdateNode" style="margin: 0;">更新</el-button>
+        <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode" style="margin: 0;">删除</el-button>
+      </el-col>
+    </el-header>
+    <el-container style="height: calc(100vh - 164px - 51px); padding: 0">
+      <el-aside style="width: 50%; padding: 0; margin: 0; background: #FFF;">
+        <el-card style="min-height: 100%">
           <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" />
-        </el-col>
-        <el-col :span="12" style="padding: 0 20px">
-          <el-button type="primary" size="small" :disabled="!isUpdateNode || editShow" @click="handleUpdateNode">更新</el-button>
-          <el-button type="primary" size="small" :disabled="!isAddNode || addShow" @click="handleAddNode">添加子节点</el-button>
-          <!-- <el-button type="primary" size="small" @click="handleAddRootNode">添加根节点</el-button> -->
-          <el-button type="primary" size="small" :disabled="!isDeleteNode" @click="handleDeleteNode">删除</el-button>
-        </el-col>
-      </el-header>
-      <el-container style="height: calc(100vh - 164px); padding: 0">
-        <el-aside style="width: 50%; padding: 0; margin: 0; background: #FFF;">
-          <el-card style="min-height: 100%">
-            <ul id="ztree" class="ztree" />
-          </el-card>
-        </el-aside>
-        <el-main style="padding: 0 0 0 20px">
-          <el-card style="min-height: 100%">
-            <el-form v-show="isShow" ref="form" :rules="rules" :model="form" label-position="left" label-width="100px">
-              <el-form-item v-show="addShow" label="父节点" prop="parentName">
-                <el-col :span="12">
-                  <el-input v-model="form.parentName" :disabled="true" />
-                </el-col>
-              </el-form-item>
-              <el-form-item label="名称" prop="name">
-                <el-col :span="12">
-                  <el-input v-show="inputShow" v-model="form.name" />
-                  <span v-show="!inputShow">{{ form.name }}</span>
-                </el-col>
-              </el-form-item>
-              <el-form-item v-show="leafShow" label="数据源字段" prop="srcColumn">
-                <el-col :span="12">
-                  <el-select v-show="inputShow" v-model="form.srcColumn" style="width: 100%" placeholder="请选择数据源字段" :clearable="true">
-                    <el-option v-for="(columnName, index) in keys" :key="index" :label="columnName" :value="columnName" />
+          <!-- 上传验证文件 -->
+          <!-- <uploader :key="uploader_key" :options="uploaderOptions" class="uploader-example" @file-success="onFileSuccess">
+            <uploader-drop>
+              <uploader-btn :directory="true" :single="true">选择文件夹</uploader-btn>
+            </uploader-drop>
+            <uploader-list></uploader-list>
+          </uploader> -->
+          <ul id="ztree" class="ztree" />
+        </el-card>
+      </el-aside>
+      <el-main style="padding: 0 0 0 20px">
+        <el-card style="min-height: 100%">
+          <el-form v-show="isShow" ref="form" :rules="rules" :model="form" label-position="left" label-width="100px">
+            <el-form-item v-show="addShow" label="父节点" prop="parentName">
+              <el-col :span="12">
+                <el-input v-model="form.parentName" :disabled="true" />
+              </el-col>
+            </el-form-item>
+            <el-form-item label="名称" prop="name">
+              <el-col :span="12">
+                <el-input v-show="inputShow" v-model="form.name" />
+                <span v-show="!inputShow">{{ form.name }}</span>
+              </el-col>
+            </el-form-item>
+            <el-form-item v-show="leafShow" label="数据源字段" prop="srcColumn">
+              <el-col :span="12">
+                <el-select v-show="inputShow" v-model="form.srcColumn" style="width: 100%" placeholder="请选择数据源字段" :clearable="true">
+                  <el-option v-for="(columnName, index) in keys" :key="index" :label="columnName" :value="columnName" />
+                </el-select>
+                <!-- 值调整，只有出现在list中才展示 -->
+                <span v-show="!inputShow">{{ form.srcColumn }}</span>
+              </el-col>
+            </el-form-item>
+            <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
+              <el-col :span="12">
+                <div v-show="inputShow">
+                  <el-input v-if="analyInput() === 'String'" v-model="upperTestValue" />
+                  <el-input v-else-if="analyInput() === 'Integer' || analyInput() === 'Long'" v-model.number="numberTestValue" />
+                  <el-select v-else-if="analyInput() === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
+                    <el-option label="true" :value="true" />
+                    <el-option label="false" :value="false" />
                   </el-select>
-                  <!-- 值调整，只有出现在list中才展示 -->
-                  <span v-show="!inputShow">{{ form.srcColumn }}</span>
-                </el-col>
-              </el-form-item>
-              <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
-                <el-col :span="12">
-                  <div v-show="inputShow">
-                    <el-input v-if="analyInput() === 'String'" v-model="upperTestValue" />
-                    <el-input v-else-if="analyInput() === 'Integer' || analyInput() === 'Long'" v-model.number="numberTestValue" />
-                    <el-select v-else-if="analyInput() === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
-                      <el-option label="true" :value="true" />
-                      <el-option label="false" :value="false" />
-                    </el-select>
-                    <el-date-picker type="datetime" v-else-if="analyInput() === 'Date'" value-format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: 100%" />
-                    <el-input v-else :disabled="true" />
-                  </div>
-                  <span v-show="!inputShow">{{ form.testvalue }}</span>
-                </el-col>
-              </el-form-item>
-              <el-form-item v-if="leafShow" label="节点/属性" prop="isnode">
-                <el-col :span="12">
-                  <el-select v-show="inputShow" v-model="form.isnode" style="width: 100%" :disabled="editShow" placeholder="请选择类型">
-                    <el-option label="节点" :value="true" />
-                    <el-option label="属性" :value="false" />
-                  </el-select>
-                  <span v-show="!inputShow">{{ form.isnode ? '节点' : '属性' }}</span>
-                </el-col>
-              </el-form-item>
-              <el-form-item v-show="leafShow" label="字段解释" prop="explain">
-                <el-col :span="12">
-                  <el-input v-show="inputShow" v-model="form.explain" />
-                  <span v-show="!inputShow">{{ form.explain }}</span>
-                </el-col>
-              </el-form-item>
-              <el-form-item v-show="leafShow" label="扩展文件名" prop="fileextension">
-                <el-col :span="12">
-                  <el-input v-show="inputShow" v-model="form.fileextension" />
-                  <span v-show="!inputShow">{{ form.fileextension }}</span>
-                </el-col>
-              </el-form-item>
-              <el-form-item v-show="leafShow" label="转换方法" prop="convextension">
-                <el-col :span="12">
-                  <el-input v-show="inputShow" v-model="form.convextension" />
-                  <span v-show="!inputShow">{{ form.convextension }}</span>
-                </el-col>
-              </el-form-item>
-              <el-form-item v-show="leafShow" label="是否生效" prop="isvalid">
-                <el-switch v-show="inputShow" v-model="form.isvalid" />
-                <span v-show="!inputShow">{{ form.isvalid ? '是' : '否' }}</span>
-              </el-form-item>
-              <el-form-item>
-                <el-button v-if="addShow || editShow" @click="info">取消</el-button>
-                <el-button v-if="addShow" type="primary" @click="addNode">添加</el-button>
-                <el-button v-if="editShow" type="primary" @click="updateNode">更新</el-button>
-              </el-form-item>
-            </el-form>
-          </el-card>
-        </el-main>
-      </el-container>
+                  <el-date-picker type="datetime" v-else-if="analyInput() === 'Date'" value-format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: 100%" />
+                  <el-input v-else :disabled="true" />
+                </div>
+                <span v-show="!inputShow">{{ form.testvalue }}</span>
+              </el-col>
+            </el-form-item>
+            <el-form-item v-if="leafShow" label="节点/属性" prop="isnode">
+              <el-col :span="12">
+                <el-select v-show="inputShow" v-model="form.isnode" style="width: 100%" :disabled="editShow" placeholder="请选择类型">
+                  <el-option label="节点" :value="true" />
+                  <el-option label="属性" :value="false" />
+                </el-select>
+                <span v-show="!inputShow">{{ form.isnode ? '节点' : '属性' }}</span>
+              </el-col>
+            </el-form-item>
+            <el-form-item v-show="leafShow" label="字段解释" prop="explain">
+              <el-col :span="12">
+                <el-input v-show="inputShow" v-model="form.explain" />
+                <span v-show="!inputShow">{{ form.explain }}</span>
+              </el-col>
+            </el-form-item>
+            <el-form-item v-show="leafShow" label="扩展文件名" prop="fileextension">
+              <el-col :span="12">
+                <el-input v-show="inputShow" v-model="form.fileextension" />
+                <span v-show="!inputShow">{{ form.fileextension }}</span>
+              </el-col>
+            </el-form-item>
+            <el-form-item v-show="leafShow" label="转换方法" prop="convextension">
+              <el-col :span="12">
+                <el-input v-show="inputShow" v-model="form.convextension" />
+                <span v-show="!inputShow">{{ form.convextension }}</span>
+              </el-col>
+            </el-form-item>
+            <el-form-item v-show="leafShow" label="是否生效" prop="isvalid">
+              <el-switch v-show="inputShow" v-model="form.isvalid" />
+              <span v-show="!inputShow">{{ form.isvalid ? '是' : '否' }}</span>
+            </el-form-item>
+            <el-form-item>
+              <el-button v-if="addShow || editShow" @click="info">取消</el-button>
+              <el-button v-if="addShow" type="primary" @click="addNode">添加</el-button>
+              <el-button v-if="editShow" type="primary" @click="updateNode">更新</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+      </el-main>
     </el-container>
-  </div>
+  </el-container>
 </template>
 <script>
-import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm } from '@/api/fixm'
-const version = 'core4.1'
+import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm, validateFiles, uploadValidateFile } from '@/api/fixm'
+// const version = 'core4.1'
 const split_sign = '->'
+let baseURL = process.env.VUE_APP_BASE_API
+if(!baseURL.endsWith('/')){
+  baseURL = baseURL + '/'
+}
+if(baseURL.startsWith('/')){
+  baseURL = baseURL.substring(baseURL.length - 1)
+}
 export default {
+  name: 'FixmPanel',
   data() {
     var validName = (rule, value, callback) => {
       if (!value) {
@@ -162,7 +188,21 @@ export default {
       columnsDesc: [],
       map: {},
       loading: false,
-      text: ''
+      text: '',
+      firstShow: false,
+      uploader_key: new Date().getTime(),
+      uploaderOptions: {
+        target: baseURL + 'fixmlogic/' + this.version + '/uploadValidateFile',
+        testChunks: false
+      },
+      validateFile: '',
+      validateFileOptions: []
+    }
+  },
+  props: {
+    version: {
+      type: String,
+      default: 'core4.1'
     }
   },
   computed: {
@@ -190,6 +230,9 @@ export default {
     },
     keys() {
       return this.columnsDesc.map(item => item.name)
+    },
+    addRootShow() {
+      return this.firstShow && this.treeData && this.treeData.length === 0
     }
   },
   watch: {
@@ -198,12 +241,23 @@ export default {
     },
     'form.srcColumn'(value) {
       this.form.testvalue = this.map[value]
+      console.log('srcColumn: ',value)
+      console.log('testvalue: ',this.form.testvalue)
+    },
+    form(value) {
+      console.log('form: ', value)
     }
   },
   created() {
     this.getList()
   },
   methods: {
+    onFileSuccess(rootFile, file, response, chunk) {
+
+    },
+    handleChange(val) {
+      console.log('级联选择器', val)
+    },
     // 计算当前输入框类型
     analyInput() {
       const srcColumn = this.form.srcColumn
@@ -388,9 +442,13 @@ export default {
       }
     },
     getList() {
-      getFixm(version).then(response => {
+      getFixm(this.version).then(response => {
         console.log(response)
         this.treeData = response.data
+        // 解决dom数据来回响应问题
+        this.$nextTick(() => {
+          this.firstShow = true
+        })
         // 当只有一个节点时，操作很流畅，因此是zTree导致的
         // this.treeData = [{name: 'xiaozhou'}]
         // this.loading = true
@@ -399,16 +457,19 @@ export default {
         this.initTree()
         // this.loading = false
       })
-      keys(version).then(response => {
+      keys(this.version).then(response => {
         this.columnsDesc = response.data
       })
-      map(version).then(response => {
+      map(this.version).then(response => {
         this.map = response.data
         // if (this.form.srcColumn && this.map) {
         //   this.form.testvalue = this.map[this.form.srcColumn]
         // } else {
         //   this.form.testvalue = undefined
         // }
+      })
+      validateFiles(this.version).then(response => {
+        this.validateFileOptions = response.data
       })
     },
     info() {
@@ -475,7 +536,7 @@ export default {
         setTimeout(() => {
           this.loading = true
           this.text = '验证中...'
-          validateFixm(version).then(response => {
+          validateFixm(this.version).then(response => {
             this.loading = false
             this.$alert('验证成功', '验证结果', {
               confirmButtonText: '确定',
@@ -542,7 +603,7 @@ export default {
             cancelButtonText: '取消',
             type: 'success'
           }).then(_ => {
-            addFixm(version, tempData).then(_ => {
+            addFixm(this.version, tempData).then(_ => {
               this.$message({
                 type: 'success',
                 message: '操作成功'
@@ -583,7 +644,17 @@ export default {
         }
       })
     },
-    handleAddRootNode() {},
+    handleAddRootNode() {
+      this.resetShow()
+      const parentName = '根节点'
+      this.form.parentName = parentName
+      // 显示表单
+      this.isShow = true
+      // 显示表单添加按钮
+      this.addShow = true
+      // 添加逻辑为直接添加叶子节点
+      this.leafShow = true
+    },
     handleUpdateNode() {
       this.commonShow()
       // 显示表单更新按钮
@@ -628,7 +699,7 @@ export default {
               cancelButtonText: '取消',
               type: 'success'
             }).then(_ => {
-              updateFixmName(version, tempData).then(_ => {
+              updateFixmName(this.version, tempData).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
@@ -660,7 +731,7 @@ export default {
               cancelButtonText: '取消',
               type: 'success'
             }).then(_ => {
-              updateFixm(version, tempData).then(_ => {
+              updateFixm(this.version, tempData).then(_ => {
                 this.$message({
                   type: 'success',
                   message: '操作成功'
@@ -836,7 +907,7 @@ export default {
         //   })
         //   console.log('is save')
         // }
-        drawFixm(version, {
+        drawFixm(this.version, {
           deleteXsdnode: deleteXsdnode,
           saveFather: saveFather,
           xsdnode: xsdnode,
@@ -932,7 +1003,7 @@ export default {
           propertyOrder: propertyOrder,
           saveFather: saveFather
         }
-        delFixm(version, fixmLogic).then(_ => {
+        delFixm(this.version, fixmLogic).then(_ => {
           this.$message({
             type: 'success',
             message: '操作成功'
@@ -994,7 +1065,7 @@ export default {
           }).then(_ => {
             // 保留空目录，返回值重要
             fixmLogic.saveFather = true
-            delFixm(version, fixmLogic).then(_ => {
+            delFixm(this.version, fixmLogic).then(_ => {
               zTree.removeNode(treeNode, false)
               // 刷新树节点
               // zTree.refresh()
@@ -1053,7 +1124,7 @@ export default {
           })
           console.log('is save')
         } else {
-          delFixm(version, fixmLogic).then(_ => {
+          delFixm(this.version, fixmLogic).then(_ => {
             zTree.removeNode(treeNode, false)
             // 刷新树节点
             // zTree.refresh()
@@ -1208,7 +1279,7 @@ export default {
         if (typeof isNode === 'undefined' || isNode) {
           return { 'color': 'blue' }
         }
-        return { 'color': 'red' }
+        return { 'color': '#8A2BE2' }
       }
       function onClick(event, treeId, treeNode) {
         console.log('onClick', treeNode.name)
@@ -1227,3 +1298,29 @@ export default {
   }
 }
 </script>
+<style>
+  .uploader-example {
+    width: 90%;
+    padding: 15px;
+    margin: 40px auto 0;
+    font-size: 12px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, .4);
+  }
+ 
+  .uploader-example .uploader-btn {
+    margin-right: 4px;
+  }
+ 
+  .uploader-example .uploader-list {
+    max-height: 440px;
+    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+</style>
+<style scoped>
+ .inlineform .el-form-item {
+   margin-bottom: 0;
+   margin-right: 0;
+ }
+</style>

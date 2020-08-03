@@ -43,8 +43,17 @@
               </el-form-item>
               <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
                 <el-col :span="12">
-                  <el-input v-show="inputShow" v-model="commonTestValue" />
-                  <span v-show="!inputShow">{{ commonTestValue }}</span>
+                  <div v-show="inputShow">
+                    <el-input v-if="analyInput() === 'String'" v-model="upperTestValue" />
+                    <el-input v-else-if="analyInput() === 'Integer' || analyInput() === 'Long'" v-model.number="numberTestValue" />
+                    <el-select v-else-if="analyInput() === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
+                      <el-option label="true" :value="true" />
+                      <el-option label="false" :value="false" />
+                    </el-select>
+                    <el-date-picker type="datetime" v-else-if="analyInput() === 'Date'" value-format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: 100%" />
+                    <el-input v-else :disabled="true" />
+                  </div>
+                  <span v-show="!inputShow">{{ form.testvalue }}</span>
                 </el-col>
               </el-form-item>
               <el-form-item v-if="leafShow" label="节点/属性" prop="isnode">
@@ -150,7 +159,7 @@ export default {
           { required: true, message: '请选择类型', trigger: 'change' }
         ]
       },
-      keys: [],
+      columnsDesc: [],
       map: {},
       loading: false,
       text: ''
@@ -160,27 +169,58 @@ export default {
     inputShow() {
       return this.addShow || this.editShow
     },
-    commonTestValue: {
+    upperTestValue: {
       get: function() {
         return this.form.testvalue
       },
       set: function(val) {
         this.form.testvalue = val.toUpperCase()
       }
+    },
+    numberTestValue: {
+      get: function() {
+        return this.form.testvalue
+      },
+      set: function(val) {
+        if (val === '') {
+          val = undefined
+        }
+        this.form.testvalue = val
+      }
+    },
+    keys() {
+      return this.columnsDesc.map(item => item.name)
     }
   },
   watch: {
-    treeNode(treeNode) {
+    treeNode() {
       this.info()
     },
     'form.srcColumn'(value) {
       this.form.testvalue = this.map[value]
+      console.log('srcColumn: ',value)
+      console.log('testvalue: ',this.form.testvalue)
+    },
+    form(value) {
+      console.log('form: ', value)
     }
   },
   created() {
     this.getList()
   },
   methods: {
+    // 计算当前输入框类型
+    analyInput() {
+      const srcColumn = this.form.srcColumn
+      if (srcColumn) {
+        for (const v of this.columnsDesc) {
+          if (v.name === srcColumn) {
+            return v.javaType
+          }
+        }
+      }
+      return false
+    },
     // 增加多层级子节点时注意 isnode应该为true(第一层级)
     addChildIndex(treeNode, isnode) {
       let items
@@ -354,8 +394,10 @@ export default {
     },
     getList() {
       getFixm(version).then(response => {
-        console.log('1')
+        console.log(response)
         this.treeData = response.data
+        // 当只有一个节点时，操作很流畅，因此是zTree导致的
+        // this.treeData = [{name: 'xiaozhou'}]
         // this.loading = true
         // this.text = '加载中...'
         this.treeData.forEach(item => this.recurisionTreeData(item, 1))
@@ -363,7 +405,7 @@ export default {
         // this.loading = false
       })
       keys(version).then(response => {
-        this.keys = response.data
+        this.columnsDesc = response.data
       })
       map(version).then(response => {
         this.map = response.data

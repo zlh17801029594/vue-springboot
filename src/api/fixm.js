@@ -67,3 +67,32 @@ export function validateFixm(version) {
     method: 'get'
   })
 }
+
+export function validateFiles(version) {
+  return request({
+    url: `/fixmlogic/${version}/validateFiles`,
+    method: 'get'
+  })
+}
+
+export function uploadValidateFile(version, data) {
+  return request({
+    url: `/fixmlogic/${version}/uploadValidateFile`,
+    method: 'post',
+    data
+  })
+}
+
+export function fixmVersions() {
+  return request({
+    url: '/fixm/versions',
+    method: 'get'
+  })
+}
+
+export function delFixmByVersion(version) {
+  return request({
+    url: `/fixm/${version}`,
+    method: 'delete'
+  })
+}

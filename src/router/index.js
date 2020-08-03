@@ -207,28 +207,55 @@ export const asyncRoutes1 = [
       }
     ]
   },
+  // {
+  //   path: '/excel',
+  //   component: Layout,
+  //   redirect: '/excel/export-excel',
+  //   name: 'Excel',
+  //   meta: {
+  //     title: 'Excel',
+  //     icon: 'excel'
+  //   },
+  //   children: [
+  //     {
+  //       path: 'export-excel',
+  //       component: () => import('@/views/excel/export-excel'),
+  //       name: 'ExportExcel',
+  //       meta: { title: 'Export Excel' }
+  //     },
+  //     {
+  //       path: 'export-selected-excel',
+  //       component: () => import('@/views/excel/select-excel'),
+  //       name: 'SelectExcel',
+  //       meta: { title: 'Export Selected' }
+  //     },
+  //     {
+  //       path: 'export-merge-header',
+  //       component: () => import('@/views/excel/merge-header'),
+  //       name: 'MergeHeader',
+  //       meta: { title: 'Merge Header' }
+  //     },
+  //     {
+  //       path: 'upload-excel',
+  //       component: () => import('@/views/excel/upload-excel'),
+  //       name: 'UploadExcel',
+  //       meta: { title: 'Upload Excel' }
+  //     }
+  //   ]
+  // },
 
   {
     path: '/fixm',
     component: Layout,
-    redirect: 'noRedirect',
-    name: 'fixm',
-    meta: {
-      title: 'FIXM管理',
-      icon: 'component'
-    },
     children: [
       {
-        path: 'core4.2',
-        component: () => import('@/views/commons/admin/fixm_ztree_2'),
-        name: 'core4.2',
-        meta: { title: 'core4.2', noCache: true }
-      },
-      {
-        path: 'core4.1',
-        component: () => import('@/views/commons/admin/fixm_ztree'),
-        name: 'core4.1',
-        meta: { title: 'core4.1', noCache: true }
+        path: 'index',
+        component: () => import('@/views/commons/admin/fixm_tabs'),
+        name: 'fixm',
+        meta: {
+          title: 'FIXM管理',
+          icon: 'component'
+        }
       }
     ]
   },
