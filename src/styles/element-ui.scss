@@ -47,12 +47,33 @@
 }
 
 // to fixed https://github.com/ElemeFE/element/issues/2461
-.el-dialog {
-  transform: none;
-  left: 0;
-  position: relative;
-  margin: 0 auto;
+// .el-dialog {
+//   transform: none;
+//   left: 0;
+//   position: relative;
+//   margin: 0 auto;
+// }
+
+.el-dialog{
+  display: flex;
+  flex-direction: column;
+  margin:0 !important;
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  /*height:600px;*/
+  max-height:calc(100% - 30px);
+  max-width:calc(100% - 30px);
+  .el-dialog__body {
+    flex:1;
+    overflow: auto;
+  }
 }
+// .el-dialog .el-dialog__body{
+//   flex:1;
+//   overflow: auto;
+// }
 
 // refine element ui upload
 .upload-container {

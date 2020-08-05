@@ -17,6 +17,10 @@
         </el-form>
       </el-col>
       <el-col :span="12" style="padding: 0 20px">
+        <el-tooltip placement="top" effect="light">
+          <div slot="content">{{ lockType | lockTipFilter }}</div>
+          <el-button type="primary" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
+        </el-tooltip>
         <el-button type="primary" v-show="addRootShow" @click="handleAddRootNode" style="margin: 0;">添加根节点</el-button>
         <el-button type="primary" :disabled="!isAddNode || addShow" @click="handleAddNode" style="margin: 0;">添加子节点</el-button>
         <el-button type="primary" :disabled="!isUpdateNode || editShow" @click="handleUpdateNode" style="margin: 0;">更新</el-button>
@@ -34,7 +38,8 @@
             </uploader-drop>
             <uploader-list></uploader-list>
           </uploader> -->
-          <ul id="ztree" class="ztree" />
+          <ul id="zTree" class="ztree" />
+          <!-- <el-tree :data="treeData" :props="{label: 'name'}" node-key="?" draggable highlight-current :allow-drag="handleAllowDrag" :allow-drop="handleAllowDrop" @node-click="handleNodeClick" /> -->
         </el-card>
       </el-aside>
       <el-main style="padding: 0 0 0 20px">
@@ -115,11 +120,29 @@
         </el-card>
       </el-main>
     </el-container>
+    <el-dialog 
+      :visible.sync="dialogVisible"
+      width="500px"
+      center>
+      <span slot="title">
+        拖动到<span style="color: teal">{{ targetName }}</span>的什么位置？
+      </span>
+      <div style="width: 100%; text-align: center;">
+        <el-radio-group v-model="drawProp.moveType">
+          <el-radio label="prev" :disabled="!dropTypes[0]" border style="margin-right: 0;">上方</el-radio>
+          <el-radio label="inner" :disabled="!dropTypes[1]" border style="margin-right: 0;">里面</el-radio>
+          <el-radio label="next" :disabled="!dropTypes[2]" border style="margin-right: 0;">下方</el-radio>
+        </el-radio-group>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button size="small" @click="dialogVisible = false">取 消</el-button>
+        <el-button size="small" type="primary" @click="handleDragFixm(drawProp)">确 定</el-button>
+      </span>
+    </el-dialog>
   </el-container>
 </template>
 <script>
 import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm, validateFiles, uploadValidateFile } from '@/api/fixm'
-// const version = 'core4.1'
 const split_sign = '->'
 let baseURL = process.env.VUE_APP_BASE_API
 if(!baseURL.endsWith('/')){
@@ -127,6 +150,18 @@ if(!baseURL.endsWith('/')){
 }
 if(baseURL.startsWith('/')){
   baseURL = baseURL.substring(baseURL.length - 1)
+}
+const lockIcon = {
+  lock: 'el-icon-lock',
+  unlock: 'el-icon-unlock'
+}
+const lockText = {
+  lock: '解锁布局',
+  unlock: '锁定布局'
+}
+const lockTip = {
+  lock: '解锁后可以进行位置拖动!',
+  unlock: '锁定后不可进行位置拖动'
 }
 export default {
   name: 'FixmPanel',
@@ -167,6 +202,7 @@ export default {
         convextension: undefined,
         isvalid: true
       },
+      zTree: null,
       treeNode: null,
       isShow: false,
       isAddNode: false,
@@ -196,7 +232,28 @@ export default {
         testChunks: false
       },
       validateFile: '',
-      validateFileOptions: []
+      validateFileOptions: [],
+      dialogVisible: false,
+      targetName: '',
+      drawProp: {
+        treeId: '',
+        treeNodes: [],
+        targetNode: null,
+        moveType: ''
+      },
+      dropTypes: [true, true, true],
+      lockType: 'lock'
+    }
+  },
+  filters: {
+    lockIconFilter(lockType) {
+      return lockIcon[lockType]
+    },
+    lockTextFilter(lockType) {
+      return lockText[lockType]
+    },
+    lockTipFilter(lockType) {
+      return lockTip[lockType]
     }
   },
   props: {
@@ -246,15 +303,31 @@ export default {
     },
     form(value) {
       console.log('form: ', value)
+    },
+    zTree(value) {
+      console.log('zTree', value)
+      console.log('nodes', value.getNodes())
     }
   },
   created() {
     this.getList()
   },
   methods: {
+    // el-tree回调函数
+    handleNodeClick(data, node, e) {
+      console.log('ell-tree: ', data, node, e)
+    },
+    handleAllowDrag(node) {
+      return true
+    },
+    handleAllowDrop(draggingNode, dropNode, type) {
+      return true
+    },
+    // vue-simple-uploader回调函数
     onFileSuccess(rootFile, file, response, chunk) {
 
     },
+    // el-cascader级联选择器回调
     handleChange(val) {
       console.log('级联选择器', val)
     },
@@ -276,8 +349,7 @@ export default {
       if (treeNode) {
         items = treeNode.children
       } else {
-        const zTree = $.fn.zTree.getZTreeObj('ztree')
-        items = zTree.getNodes()
+        items = this.zTree.getNodes()
       }
       if (items) {
         if (isnode) {
@@ -300,8 +372,7 @@ export default {
       if (treeNode) {
         items = treeNode.children
       } else {
-        const zTree = $.fn.zTree.getZTreeObj('ztree')
-        items = zTree.getNodes()
+        items = this.zTree.getNodes()
       }
       if (items) {
         return items.map(item => item.name)
@@ -321,8 +392,7 @@ export default {
       if (treeNode) {
         items = treeNode.children
       } else {
-        const zTree = $.fn.zTree.getZTreeObj('ztree')
-        items = zTree.getNodes()
+        items = this.zTree.getNodes()
       }
       const nodeOrderChildName = []
       const propertyOrderChildName = []
@@ -454,7 +524,7 @@ export default {
         // this.loading = true
         // this.text = '加载中...'
         this.treeData.forEach(item => this.recurisionTreeData(item, 1))
-        this.initTree()
+        this.initTree(this.treeData)
         // this.loading = false
       })
       keys(this.version).then(response => {
@@ -570,7 +640,7 @@ export default {
       this.$refs['form'].validate((valid) => {
         if (valid) {
           const tempData = Object.assign({}, this.form)
-          const zTree = $.fn.zTree.getZTreeObj('ztree')
+          const zTree = this.zTree
           const treeNode = this.treeNode
           // fatherXsdnode
           const fatherXsdnode = this.buildXsdnode(treeNode)
@@ -664,7 +734,7 @@ export default {
       this.$refs['form'].validate((valid) => {
         if (valid) {
           const tempData = Object.assign({}, this.form)
-          const zTree = $.fn.zTree.getZTreeObj('ztree')
+          const zTree = this.zTree
           const treeNode = this.treeNode
           // xsdnode
           const xsdnode = this.buildXsdnode(treeNode)
@@ -762,9 +832,10 @@ export default {
       })
     },
     // targetNode可能为null(根节点)
-    handleDragFixm(treeId, treeNodes, targetNode, moveType) {
-      const zTree = $.fn.zTree.getZTreeObj('ztree')
-      console.log(treeNodes, targetNode, moveType)
+    handleDragFixm(drawProp) {
+      const treeId = drawProp.treeId, treeNodes = drawProp.treeNodes, targetNode = drawProp.targetNode, moveType = drawProp.moveType
+      console.log(treeNodes, targetNode, targetNode ? targetNode.name : '根节点', moveType)
+      const zTree = this.zTree
       const sourceNode = treeNodes[0]
       const fathNode = sourceNode.getParentNode()
       const name = sourceNode.name
@@ -819,6 +890,7 @@ export default {
         newPropertyOrder = this.convertOrder(propertyOrderChildName)
       } else {
         const newFatherNode = targetNode.getParentNode()
+        console.log('节点是否已变更', fathNode, newFatherNode, fathNode === newFatherNode)
         // 同级校验可以放prev、inner、next中
         this.isSameName(newFatherNode, xsdnode)
         newFatherXsdnode = this.buildXsdnode(newFatherNode)
@@ -882,71 +954,66 @@ export default {
           newPropertyOrder = this.convertOrder(propertyOrderChildName)
         }
       }
-      this.$confirm('确认拖拽到此处', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'success'
-      }).then(async _ => {
-        let deleteNode, deleteXsdnode
-        let saveFather = this.saveFather(sourceNode)
-        // if (saveFather) {
-        //   const blankFather = this.blankFather(sourceNode.getParentNode())
-        //   await this.$confirm('是否删除空白目录：[' + blankFather.name + ']', '提示', {
-        //     confirmButtonText: '删除',
-        //     cancelButtonText: '保留',
-        //     type: 'warning'
-        //   }).then(_ => {
-        //     // 删除空目录，生成deleteXsdnode
-        //     deleteNode = blankFather
-        //     deleteXsdnode = this.buildXsdnode(blankFather)
-        //     // 无需保留父节点
-        //     saveFather = false
-        //   }).catch(_ => {
-        //     // 保留空目录，返回值重要
-        //     // fixmLogic.saveFather = true
-        //   })
-        //   console.log('is save')
-        // }
-        drawFixm(this.version, {
-          deleteXsdnode: deleteXsdnode,
-          saveFather: saveFather,
-          xsdnode: xsdnode,
-          newFatherXsdnode: newFatherXsdnode,
-          nodeOrder: nodeOrder,
-          propertyOrder: propertyOrder,
-          newNodeOrder: newNodeOrder,
-          newPropertyOrder: newPropertyOrder
-        }).then(response => {
-          this.$message({
-            type: 'success',
-            message: '操作成功'
-          })
-          // 拖拽节点
-          zTree.moveNode(targetNode, treeNodes[0], moveType)
-          // 删除空节点
-          if (deleteNode) {
-            zTree.removeNode(deleteNode, false)
-          }
-          // 刷新树节点
-          // zTree.refresh()
-          console.log(fathNode)
-
-          // 操作界面置空（或者调用 this.info() 展示详情信息）
-          this.treeNode = null
-          // this.info()
-          if (this.hasSrcColumn(sourceNode)) {
-            this.validateFixm()
-          }
-        }).catch(res => {
-          if (res.code === 450) {
-            this.getList()
-          }
+      let deleteNode, deleteXsdnode
+      let saveFather = this.saveFather(sourceNode)
+      // 此注释代码的运行 需要在函数前添加异步转同步操作支持
+      // if (saveFather) {
+      //   const blankFather = this.blankFather(sourceNode.getParentNode())
+      //   await this.$confirm('是否删除空白目录：[' + blankFather.name + ']', '提示', {
+      //     confirmButtonText: '删除',
+      //     cancelButtonText: '保留',
+      //     type: 'warning'
+      //   }).then(_ => {
+      //     // 删除空目录，生成deleteXsdnode
+      //     deleteNode = blankFather
+      //     deleteXsdnode = this.buildXsdnode(blankFather)
+      //     // 无需保留父节点
+      //     saveFather = false
+      //   }).catch(_ => {
+      //     // 保留空目录，返回值重要
+      //     // fixmLogic.saveFather = true
+      //   })
+      //   console.log('is save')
+      // }
+      drawFixm(this.version, {
+        deleteXsdnode: deleteXsdnode,
+        saveFather: saveFather,
+        xsdnode: xsdnode,
+        newFatherXsdnode: newFatherXsdnode,
+        nodeOrder: nodeOrder,
+        propertyOrder: propertyOrder,
+        newNodeOrder: newNodeOrder,
+        newPropertyOrder: newPropertyOrder
+      }).then(response => {
+        this.$message({
+          type: 'success',
+          message: '操作成功'
         })
-      }).catch(_ => {
+        this.dialogVisible = false
+        // 拖拽节点
+        zTree.moveNode(targetNode, treeNodes[0], moveType)
+        // 删除空节点
+        if (deleteNode) {
+          zTree.removeNode(deleteNode, false)
+        }
+        // 刷新树节点
+        // zTree.refresh()
+        console.log(fathNode)
+
+        // 操作界面置空（或者调用 this.info() 展示详情信息）
+        this.treeNode = null
+        // this.info()
+        if (this.hasSrcColumn(sourceNode)) {
+          this.validateFixm()
+        }
+      }).catch(res => {
+        if (res.code === 450) {
+          this.getList()
+        }
       })
     },
     async handleDeleteNode() {
-      const zTree = $.fn.zTree.getZTreeObj('ztree')
+      const zTree = this.zTree
       let treeNode = this.treeNode
       const isParent = treeNode.isParent
       let message = '确认删除：[' + treeNode.name + ']'
@@ -1024,7 +1091,7 @@ export default {
       console.log('is delete')
     },
     async handleDeleteNode_bak() {
-      const zTree = $.fn.zTree.getZTreeObj('ztree')
+      const zTree = this.zTree
       const treeNode = this.treeNode
       // xsdnode
       const xsdnode = this.buildXsdnode(treeNode)
@@ -1143,20 +1210,103 @@ export default {
       console.log('is delete')
     },
     beforeDrop(treeId, treeNodes, targetNode, moveType) {
-      this.handleDragFixm(treeId, treeNodes, targetNode, moveType)
+      this.targetName = targetNode ? targetNode.name : '根节点'
+      this.dropTypes[0] = this.dropPrev(treeId, treeNodes, targetNode)
+      this.dropTypes[1] = this.dropInner(treeId, treeNodes, targetNode)
+      this.dropTypes[2] = this.dropNext(treeId, treeNodes, targetNode)
+      this.drawProp = {
+        treeId: treeId,
+        treeNodes: treeNodes,
+        targetNode: targetNode,
+        moveType: moveType
+      }
+      this.dialogVisible = true
+      // this.handleDragFixm(treeId, treeNodes, targetNode, moveType)
       return false
     },
     onDrop(event, treeId, treeNodes, targetNode, moveType) {
+      // 未拖拽成功会回调该函数。不会回调beforeDrop()
       console.log(treeNodes, targetNode, moveType)
       if (!moveType) {
         console.log('未拖拽')
-      } else {
-        // 刷新树节点
-        // const zTree = $.fn.zTree.getZTreeObj('ztree')
-        // zTree.refresh()
       }
     },
-    initTree() {
+    beforeDrag(treeId, treeNodes) {
+      // console.log('this.lockType !== \'lock\'', this.lockType !== 'lock')
+      if (this.lockType === 'lock') {
+        this.$notify({
+          title: '拖动提示',
+          message: '布局已锁定！请先解锁',
+          type: 'warning',
+          duration: 2000,
+          offset: 100
+        })
+      }
+      return this.lockType !== 'lock'
+    },
+    onClick(event, treeId, treeNode) {
+      console.log('onClick', treeNode.name)
+      this.treeNode = treeNode
+    },
+    fontCss(treeId, treeNode) {
+      const isNode = treeNode.isnode
+      if (treeNode.isParent) {
+        return {}
+      }
+      if (typeof isNode === 'undefined' || isNode) {
+        return { 'color': 'blue' }
+      }
+      return { 'color': '#8A2BE2' }
+    },
+    dropPrev(treeId, nodes, targetNode) {
+      if (!targetNode) {
+        // 方便主动调佣。回调不会出现targetNode为null的情况
+        return false
+      }
+      var pNode = targetNode.getParentNode()
+      const node = nodes[0]
+      const parentNode = node.getParentNode()
+      if (parentNode !== pNode && this.isSameName(pNode, node.name)) {
+        // 跨级拖拽
+        return false
+      }
+      // 判断位置，node/property
+      const isnode = typeof node.isnode !== 'undefined' ? node.isnode : true
+      const isnode1 = typeof targetNode.isnode !== 'undefined' ? targetNode.isnode : true
+      const preNode = targetNode.getPreNode()
+      // 同类型位置可拖拽，或者node拖拽到第一个property的prev位置
+      if (isnode === isnode1 || isnode && !isnode1 && (preNode === null || preNode.isnode !== false)) {
+        return true
+      }
+      return false
+    },
+    dropInner(treeId, nodes, targetNode) {
+      const node = nodes[0]
+      return (targetNode && targetNode.isnode !== false || !targetNode) && !this.isSameName(targetNode, node.name)
+    },
+    dropNext(treeId, nodes, targetNode) {
+      if (!targetNode) {
+        // 方便主动调佣。回调不会出现targetNode为null的情况
+        return false
+      }
+      var pNode = targetNode.getParentNode()
+      const node = nodes[0]
+      const parentNode = node.getParentNode()
+      if (parentNode !== pNode && this.isSameName(pNode, node.name)) {
+        // 跨级拖拽
+        return false
+      }
+      // 判断位置，node/property
+      const isnode = typeof node.isnode !== 'undefined' ? node.isnode : true
+      const isnode1 = typeof targetNode.isnode !== 'undefined' ? targetNode.isnode : true
+      const nextNode = targetNode.getNextNode()
+      // 同类型位置可拖拽，或者property拖拽到最后一个node的next位置
+      if (isnode === isnode1 || !isnode && isnode1 && (nextNode === null || nextNode.isnode === false)) {
+        return true
+      }
+      return false
+    },
+    initTree(treeData) {
       const _this = this
       const setting = {
         data: {
@@ -1166,134 +1316,33 @@ export default {
           }
         },
         view: {
-          fontCss: fontCss,
+          fontCss: _this.fontCss,
           selectedMulti: false
         },
         edit: {
           drag: {
             isCopy: false,
             isMove: true,
-            prev: dropPrev,
-            inner: dropInner,
-            next: dropNext
+            prev: _this.dropPrev,
+            inner: _this.dropInner,
+            next: _this.dropNext
           },
           enable: true,
           showRenameBtn: false,
           showRemoveBtn: false
         },
         callback: {
-          beforeDrag: beforeDrag,
+          beforeDrag: _this.beforeDrag,
           beforeDrop: _this.beforeDrop,
           onDrop: _this.onDrop,
-          onClick: onClick
+          onClick: _this.onClick
         }
       }
-      function dropPrev(treeId, nodes, targetNode) {
-        var pNode = targetNode.getParentNode()
-        // if (pNode && pNode.dropInner === false) {
-        //   return false
-        // } else {
-        //   for (var i = 0, l = curDragNodes.length; i < l; i++) {
-        //     var curPNode = curDragNodes[i].getParentNode()
-        //     if (curPNode && curPNode !== targetNode.getParentNode() && curPNode.childOuter === false) {
-        //       return false
-        //     }
-        //   }
-        // }
-        const node = nodes[0]
-        const parentNode = node.getParentNode()
-        const fatherXsdnode = _this.buildXsdnode(parentNode)
-        const newFatherXsdnode = _this.buildXsdnode(pNode)
-        if (fatherXsdnode !== newFatherXsdnode) {
-          // 跨级拖拽
-          if (_this.isSameName(pNode, node.name)) {
-            return false
-          }
-        }
-        // 判断位置，node/property
-        const isnode = typeof node.isnode !== 'undefined' ? node.isnode : true
-        const isnode1 = typeof targetNode.isnode !== 'undefined' ? targetNode.isnode : true
-        const preNode = targetNode.getPreNode()
-        // 同类型位置可拖拽，或者node拖拽到第一个property的prev位置
-        if (isnode === isnode1 || isnode && !isnode1 && (preNode === null || preNode.isnode !== false)) {
-          return true
-        }
-        return false
-      }
-      function dropInner(treeId, nodes, targetNode) {
-        // if (targetNode && targetNode.dropInner === false) {
-        //   return false
-        // } else {
-        //   for (var i = 0, l = curDragNodes.length; i < l; i++) {
-        //     if (!targetNode && curDragNodes[i].dropRoot === false) {
-        //       return false
-        //     } else if (curDragNodes[i].parentTId && curDragNodes[i].getParentNode() !== targetNode && curDragNodes[i].getParentNode().childOuter === false) {
-        //       return false
-        //     }
-        //   }
-        // }
-        const node = nodes[0]
-        return !_this.isSameName(targetNode, node.name) && (targetNode && targetNode.isnode !== false || !targetNode)
-        // return true
-      }
-      function dropNext(treeId, nodes, targetNode) {
-        var pNode = targetNode.getParentNode()
-        // if (pNode && pNode.dropInner === false) {
-        //   return false
-        // } else {
-        //   for (var i = 0, l = curDragNodes.length; i < l; i++) {
-        //     var curPNode = curDragNodes[i].getParentNode()
-        //     if (curPNode && curPNode !== targetNode.getParentNode() && curPNode.childOuter === false) {
-        //       return false
-        //     }
-        //   }
-        // }
-        const node = nodes[0]
-        const parentNode = node.getParentNode()
-        const fatherXsdnode = _this.buildXsdnode(parentNode)
-        const newFatherXsdnode = _this.buildXsdnode(pNode)
-        if (fatherXsdnode !== newFatherXsdnode) {
-          // 跨级拖拽
-          if (_this.isSameName(pNode, node.name)) {
-            return false
-          }
-        }
-        // 判断位置，node/property
-        const isnode = typeof node.isnode !== 'undefined' ? node.isnode : true
-        const isnode1 = typeof targetNode.isnode !== 'undefined' ? targetNode.isnode : true
-        const nextNode = targetNode.getNextNode()
-        // 同类型位置可拖拽，或者property拖拽到最后一个node的next位置
-        if (isnode === isnode1 || !isnode && isnode1 && (nextNode === null || nextNode.isnode === false)) {
-          return true
-        }
-        return false
-      }
-      function beforeDrag(treeId, treeNodes) {
-        return true
-      }
-      function fontCss(treeId, treeNode) {
-        const isNode = treeNode.isnode
-        if (treeNode.isParent) {
-          return {}
-        }
-        if (typeof isNode === 'undefined' || isNode) {
-          return { 'color': 'blue' }
-        }
-        return { 'color': '#8A2BE2' }
-      }
-      function onClick(event, treeId, treeNode) {
-        console.log('onClick', treeNode.name)
-        _this.treeNode = treeNode
-      }
-      const zNodes = _this.treeData
-      console.log('2')
-      $.fn.zTree.init($('#ztree'), setting, zNodes)
-      console.log('3')
-      const ztree = $.fn.zTree.getZTreeObj('ztree')
-      // ztree.expandAll(true)
-      console.log('4')
+      $.fn.zTree.init($('#zTree'), setting, treeData)
+      this.zTree = $.fn.zTree.getZTreeObj('zTree')
+      // this.zTree.expandAll(true)
       // false 过滤不加颜色不高亮提示
-      fuzzySearch('ztree', '#key', false, true) // 初始化模糊搜索方法
+      fuzzySearch('zTree', '#key', false, true) // 初始化模糊搜索方法
     }
   }
 }
@@ -1319,8 +1368,8 @@ export default {
   }
 </style>
 <style scoped>
- .inlineform .el-form-item {
-   margin-bottom: 0;
-   margin-right: 0;
- }
+  .inlineform .el-form-item {
+    margin-bottom: 0;
+    margin-right: 0;
+  }
 </style>

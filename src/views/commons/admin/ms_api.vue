@@ -92,7 +92,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-dialog ref="dialog" :visible.sync="dialog" :center="true" width="500px">
+      <el-dialog ref="dialog" :visible.sync="dialog" :center="true" width="600px">
         <tree ref="tree" :tree-data="filterArr" :checkbox="checkbox" :status="colorStatus" />
         <span slot="footer">
           <el-button size="small" @click="dialog=false">取消</el-button>
