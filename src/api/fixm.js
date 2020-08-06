@@ -61,10 +61,11 @@ export function map(version) {
   })
 }
 
-export function validateFixm(version) {
+export function uploadValidateFile(version, data) {
   return request({
-    url: `/fixmlogic/${version}/validate`,
-    method: 'get'
+    url: `/fixmlogic/${version}/uploadValidateFile`,
+    method: 'post',
+    data
   })
 }
 
@@ -75,11 +76,25 @@ export function validateFiles(version) {
   })
 }
 
-export function uploadValidateFile(version, data) {
+export function getValidateMapValue(version) {
   return request({
-    url: `/fixmlogic/${version}/uploadValidateFile`,
+    url: `/fixmlogic/${version}/getValidateMapValue`,
+    method: 'get'
+  })
+}
+
+export function updateValidateMap(version, data) {
+  return request({
+    url: `/fixmlogic/${version}/updateValidateMap`,
     method: 'post',
     data
+  })
+}
+
+export function validateFixm(version) {
+  return request({
+    url: `/fixmlogic/${version}/validate`,
+    method: 'get'
   })
 }
 

@@ -2,24 +2,25 @@
   <el-container v-loading="loading" :element-loading-text="text">
     <el-header align="left" style="height: 40px; line-height: 0; padding: 0; padding-bottom: 4px">
       <el-col :span="12">
-        <el-form label-position="left" inline label-width="80px" class="inlineform">
-          <el-form-item>
-            <el-cascader
-              v-model="validateFile"
-              :options="validateFileOptions"
-              :props="{ expandTrigger: 'hover', value: 'name', label: 'name' }"
-              @change="handleChange">
-            </el-cascader>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="1">指定验证文件</el-button>
-          </el-form-item>
-        </el-form>
+        <el-cascader
+          v-model="validateFile"
+          placeholder="请选取验证文件！"
+          :show-all-levels = "false"
+          :options="validateFileOptions"
+          :props="{ expandTrigger: 'click', value: 'name', label: 'name' }"
+          @change="handleChange"
+          @focus="focus"
+          style="width: 50%">
+          <template slot-scope="{ node, data }">
+            <span>{{ data.name }}</span>
+            <span v-if="!node.isLeaf"> ({{ data.children.length }}) </span>
+          </template>
+        </el-cascader>
       </el-col>
       <el-col :span="12" style="padding: 0 20px">
         <el-tooltip placement="top" effect="light">
           <div slot="content">{{ lockType | lockTipFilter }}</div>
-          <el-button type="primary" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
+          <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
         </el-tooltip>
         <el-button type="primary" v-show="addRootShow" @click="handleAddRootNode" style="margin: 0;">添加根节点</el-button>
         <el-button type="primary" :disabled="!isAddNode || addShow" @click="handleAddNode" style="margin: 0;">添加子节点</el-button>
@@ -142,7 +143,7 @@
   </el-container>
 </template>
 <script>
-import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm, validateFiles, uploadValidateFile } from '@/api/fixm'
+import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm, validateFiles, getValidateMapValue, updateValidateMap, uploadValidateFile } from '@/api/fixm'
 const split_sign = '->'
 let baseURL = process.env.VUE_APP_BASE_API
 if(!baseURL.endsWith('/')){
@@ -232,6 +233,8 @@ export default {
         testChunks: false
       },
       validateFile: '',
+      validateFileOrign: '',
+      changeFlag: false,
       validateFileOptions: [],
       dialogVisible: false,
       targetName: '',
@@ -313,6 +316,44 @@ export default {
     this.getList()
   },
   methods: {
+    getList() {
+      getFixm(this.version).then(response => {
+        console.log(response)
+        this.treeData = response.data
+        // 解决dom数据来回响应问题
+        this.$nextTick(() => {
+          this.firstShow = true
+        })
+        // 当只有一个节点时，操作很流畅，因此是zTree导致的
+        // this.treeData = [{name: 'xiaozhou'}]
+        // this.loading = true
+        // this.text = '加载中...'
+        this.treeData.forEach(item => this.recurisionTreeData(item, 1))
+        this.initTree(this.treeData)
+        // this.loading = false
+
+        validateFiles(this.version).then(response => {
+          this.validateFileOptions = response.data
+          getValidateMapValue(this.version).then(response => {
+            this.validateFile = response.data
+            this.$nextTick(() => {
+              this.changeFlag = true
+            })
+          })
+        })
+        keys(this.version).then(response => {
+          this.columnsDesc = response.data
+        })
+        map(this.version).then(response => {
+          this.map = response.data
+          // if (this.form.srcColumn && this.map) {
+          //   this.form.testvalue = this.map[this.form.srcColumn]
+          // } else {
+          //   this.form.testvalue = undefined
+          // }
+        })
+      })
+    },
     // el-tree回调函数
     handleNodeClick(data, node, e) {
       console.log('ell-tree: ', data, node, e)
@@ -327,9 +368,43 @@ export default {
     onFileSuccess(rootFile, file, response, chunk) {
 
     },
+    // el-cascader级联选择器 用户开始输入，提前备份validateFileOrign
+    focus() {
+      if (this.validateFile) {
+        this.validateFileOrign = JSON.parse(JSON.stringify(this.validateFile))
+      } else {
+        this.validateFileOrign = ''
+      }
+    },
     // el-cascader级联选择器回调
     handleChange(val) {
-      console.log('级联选择器', val)
+      if (this.changeFlag){
+        this.$confirm('是否更新验证文件为：' + (val ? val[val.length -1] : ''), '提示', {
+          confirmButtonText: '确认',
+          cancelButtonText: '取消',
+          type: 'success'
+        }).then(response => {
+          updateValidateMap(this.version, val).then(response => {
+            this.$message({
+              type: 'success',
+              message: '更新验证文件成功'
+            })
+          }).catch(_ => {
+            this.changeFlag = false
+            this.validateFile = this.validateFileOrign
+            this.$nextTick(() => {
+              this.changeFlag = true
+            })
+          })
+        }).catch(_ => {
+          this.changeFlag = false
+          this.validateFile = this.validateFileOrign
+          this.$nextTick(() => {
+            this.changeFlag = true
+          })
+        })
+        
+      }
     },
     // 计算当前输入框类型
     analyInput() {
@@ -510,37 +585,6 @@ export default {
           this.recurisionTreeData(item, level + 1)
         })
       }
-    },
-    getList() {
-      getFixm(this.version).then(response => {
-        console.log(response)
-        this.treeData = response.data
-        // 解决dom数据来回响应问题
-        this.$nextTick(() => {
-          this.firstShow = true
-        })
-        // 当只有一个节点时，操作很流畅，因此是zTree导致的
-        // this.treeData = [{name: 'xiaozhou'}]
-        // this.loading = true
-        // this.text = '加载中...'
-        this.treeData.forEach(item => this.recurisionTreeData(item, 1))
-        this.initTree(this.treeData)
-        // this.loading = false
-      })
-      keys(this.version).then(response => {
-        this.columnsDesc = response.data
-      })
-      map(this.version).then(response => {
-        this.map = response.data
-        // if (this.form.srcColumn && this.map) {
-        //   this.form.testvalue = this.map[this.form.srcColumn]
-        // } else {
-        //   this.form.testvalue = undefined
-        // }
-      })
-      validateFiles(this.version).then(response => {
-        this.validateFileOptions = response.data
-      })
     },
     info() {
       const treeNode = this.treeNode
@@ -1238,7 +1282,7 @@ export default {
           title: '拖动提示',
           message: '布局已锁定！请先解锁',
           type: 'warning',
-          duration: 2000,
+          duration: 3000,
           offset: 100
         })
       }
@@ -1256,7 +1300,7 @@ export default {
       if (typeof isNode === 'undefined' || isNode) {
         return { 'color': 'blue' }
       }
-      return { 'color': '#8A2BE2' }
+      return { 'color': '#32CD32' }
     },
     dropPrev(treeId, nodes, targetNode) {
       if (!targetNode) {
@@ -1368,8 +1412,4 @@ export default {
   }
 </style>
 <style scoped>
-  .inlineform .el-form-item {
-    margin-bottom: 0;
-    margin-right: 0;
-  }
 </style>
