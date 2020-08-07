@@ -16,15 +16,20 @@
             <span v-if="!node.isLeaf"> ({{ data.children.length }}) </span>
           </template>
         </el-cascader>
+        <!-- 有数据时展示，和添加根节点相反 -->
+        <el-tooltip content="对当前数据进行一次验证！" placement="top" effect="light">
+          <el-button type="primary" @click="handleValidateFixm" style="margin: 0;">验证</el-button>
+        </el-tooltip>
       </el-col>
       <el-col :span="12" style="padding: 0 20px">
         <el-tooltip placement="top" effect="light">
           <div slot="content">{{ lockType | lockTipFilter }}</div>
           <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
         </el-tooltip>
-        <el-button type="primary" v-show="addRootShow" @click="handleAddRootNode" style="margin: 0;">添加根节点</el-button>
-        <el-button type="primary" :disabled="!isAddNode || addShow" @click="handleAddNode" style="margin: 0;">添加子节点</el-button>
-        <el-button type="primary" :disabled="!isUpdateNode || editShow" @click="handleUpdateNode" style="margin: 0;">更新</el-button>
+        <el-button type="primary" v-show="addRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
+        <el-button type="primary" :disabled="!isAddNode || addShow" @click="handleAdd(treeNode)" style="margin: 0;">添加子节点</el-button>
+        <!-- 方案二 -->
+        <el-button type="primary" :disabled="!isUpdateNode || updateShow" @click="handleEdit(treeNode)" style="margin: 0;">编辑</el-button>
         <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode" style="margin: 0;">删除</el-button>
       </el-col>
     </el-header>
@@ -45,10 +50,10 @@
       </el-aside>
       <el-main style="padding: 0 0 0 20px">
         <el-card style="min-height: 100%">
-          <el-form v-show="isShow" ref="form" :rules="rules" :model="form" label-position="left" label-width="100px">
+          <el-form v-show="isShow" ref="form" :rules="inputShow ? rules : {}" :model="form" label-position="left" label-width="100px">
             <el-form-item v-show="addShow" label="父节点" prop="parentName">
               <el-col :span="12">
-                <el-input v-model="form.parentName" :disabled="true" />
+                <el-input v-model="parentName" :disabled="true" />
               </el-col>
             </el-form-item>
             <el-form-item label="名称" prop="name">
@@ -83,7 +88,7 @@
             </el-form-item>
             <el-form-item v-if="leafShow" label="节点/属性" prop="isnode">
               <el-col :span="12">
-                <el-select v-show="inputShow" v-model="form.isnode" style="width: 100%" :disabled="editShow" placeholder="请选择类型">
+                <el-select v-show="inputShow" v-model="form.isnode" style="width: 100%" :disabled="updateShow" placeholder="请选择类型">
                   <el-option label="节点" :value="true" />
                   <el-option label="属性" :value="false" />
                 </el-select>
@@ -113,9 +118,13 @@
               <span v-show="!inputShow">{{ form.isvalid ? '是' : '否' }}</span>
             </el-form-item>
             <el-form-item>
-              <el-button v-if="addShow || editShow" @click="info">取消</el-button>
-              <el-button v-if="addShow" type="primary" @click="addNode">添加</el-button>
-              <el-button v-if="editShow" type="primary" @click="updateNode">更新</el-button>
+              <!-- 方案一 -->
+              <!-- <el-button v-show="updateShow" @click="handleBack" style="margin: 0;">返回</el-button> -->
+              <!-- <el-button v-show="!inputShow" type="primary" @click="handleUpdate" style="margin: 0;">编辑</el-button> -->
+              <!-- 方案二 -->
+              <el-button v-show="inputShow" @click="handleInfo(treeNode)" style="margin: 0;">返回</el-button>
+              <el-button v-show="addShow" type="primary" @click="addNode(treeNode)" style="margin: 0;">提交</el-button>
+              <el-button v-show="updateShow" type="primary" @click="updateNode(treeNode)" style="margin: 0;">提交</el-button>
             </el-form-item>
           </el-form>
         </el-card>
@@ -164,6 +173,16 @@ const lockTip = {
   lock: '解锁后可以进行位置拖动!',
   unlock: '锁定后不可进行位置拖动'
 }
+const formOrigin = {
+  name: undefined,
+  srcColumn: undefined,
+  isnode: undefined,
+  explain: undefined,
+  testvalue: undefined,
+  fileextension: undefined,
+  convextension: undefined,
+  isvalid: true
+}
 export default {
   name: 'FixmPanel',
   data() {
@@ -171,11 +190,11 @@ export default {
       if (!value) {
         callback(new Error('名称不能为空'))
       } else {
-        if (this.addShow || this.editShow) {
+        if (this.addShow || this.updateShow) {
           let treeNode
           if (this.addShow) {
             treeNode = this.treeNode
-          } else if (this.editShow) {
+          } else if (this.updateShow) {
             treeNode = this.treeNode.getParentNode()
             const name = this.treeNode.name
             if (name === value) {
@@ -191,9 +210,9 @@ export default {
     }
     return {
       treeData: [],
+      // zTree过滤函数使用
       key: undefined,
       form: {
-        parentName: undefined,
         name: undefined,
         srcColumn: undefined,
         isnode: undefined,
@@ -203,6 +222,9 @@ export default {
         convextension: undefined,
         isvalid: true
       },
+      parentName: '',
+      // 方案一：用于编辑返回按钮
+      formOrigin: {},
       zTree: null,
       treeNode: null,
       isShow: false,
@@ -211,7 +233,7 @@ export default {
       isDeleteNode: false,
       leafShow: false,
       addShow: false,
-      editShow: false,
+      updateShow: false,
       rules: {
         name: [
           // { required: true, message: '名称不能为空', trigger: 'blur' },
@@ -267,21 +289,21 @@ export default {
   },
   computed: {
     inputShow() {
-      return this.addShow || this.editShow
+      return this.addShow || this.updateShow
     },
     upperTestValue: {
-      get: function() {
+      get() {
         return this.form.testvalue
       },
-      set: function(val) {
+      set(val) {
         this.form.testvalue = val.toUpperCase()
       }
     },
     numberTestValue: {
-      get: function() {
+      get() {
         return this.form.testvalue
       },
-      set: function(val) {
+      set(val) {
         if (val === '') {
           val = undefined
         }
@@ -296,20 +318,8 @@ export default {
     }
   },
   watch: {
-    treeNode() {
-      this.info()
-    },
     'form.srcColumn'(value) {
       this.form.testvalue = this.map[value]
-      console.log('srcColumn: ',value)
-      console.log('testvalue: ',this.form.testvalue)
-    },
-    form(value) {
-      console.log('form: ', value)
-    },
-    zTree(value) {
-      console.log('zTree', value)
-      console.log('nodes', value.getNodes())
     }
   },
   created() {
@@ -346,11 +356,6 @@ export default {
         })
         map(this.version).then(response => {
           this.map = response.data
-          // if (this.form.srcColumn && this.map) {
-          //   this.form.testvalue = this.map[this.form.srcColumn]
-          // } else {
-          //   this.form.testvalue = undefined
-          // }
         })
       })
     },
@@ -461,7 +466,7 @@ export default {
       }
       return false
     },
-    // 查找子节点不同类型名称数组(更新排序序列需要)
+    // 查找子节点不同类型名称数组(更新排序序列需要) ok
     findOrderChildName(treeNode) {
       let items
       if (treeNode) {
@@ -483,7 +488,7 @@ export default {
       }
       return [nodeOrderChildName, propertyOrderChildName]
     },
-    // 构建子节点排序序列(这是更新后的序列，好像没用处)
+    // 构建子节点排序序列(这是更新后的序列，好像没用处) ok
     convertOrder(orderChildName) {
       if (orderChildName && orderChildName.length) {
         let order = ''
@@ -497,7 +502,7 @@ export default {
       }
       return ''
     },
-    // 生成xsdnode值
+    // 生成xsdnode值 ok
     buildXsdnode(treeNode) {
       if (treeNode) {
         const nodes = treeNode.getPath()
@@ -589,7 +594,7 @@ export default {
     info() {
       const treeNode = this.treeNode
       if (treeNode) {
-        this.commonShow()
+        // this.commonShow()
       } else {
         this.isAddNode = false
         this.isUpdateNode = false
@@ -597,47 +602,117 @@ export default {
         this.isShow = false
       }
     },
-    commonShow() {
-      const treeNode = this.treeNode
-      const isAddNode = treeNode.isParent || treeNode.isnode
-      this.isAddNode = isAddNode
-      this.isUpdateNode = true
-      this.isDeleteNode = true
-      this.isShow = true
-      this.leafShow = !treeNode.isParent
-      this.resetShow()
-      // this.form = Object.assign({}, treeNode)
-      Object.assign(this.form, treeNode)
-      this.form.testvalue = this.map[this.form.srcColumn]
+    copyTreeNode2Form(treeNode) {
+      if (!treeNode) {
+        return {}
+      }
+      return {
+        name: treeNode.name,
+        srcColumn: treeNode.srcColumn,
+        // 此字段也可脱离表单
+        // testvalue: treeNode.testvalue,
+        isnode: treeNode.isnode,
+        explain: treeNode.explain,
+        fileextension: treeNode.fileextension,
+        convextension: treeNode.convextension,
+        isvalid: treeNode.isvalid
+      }
     },
-    resetShow() {
-      // 重置表单（值和校验规则）
-      // this.$refs['form'].resetFields()
-      this.resetForm()
-      this.$nextTick(() => {
-        this.$refs['form'].clearValidate()
-      })
-      // 重置展示项
+    // 选取节点处理
+    handleSelect(treeNode) {
+      this.treeNode = treeNode
+      if (!treeNode) {
+        this.isAddNode = false
+        this.isUpdateNode = false
+        this.isDeleteNode = false
+        this.isShow = false
+      } else {
+        // 节点操作按钮
+        this.isAddNode = treeNode.isParent || treeNode.isnode
+        this.isUpdateNode = true
+        this.isDeleteNode = true
+        // 表单展示
+        this.isShow = true
+        this.handleInfo(treeNode)
+      }
+    },
+    handleInfo(treeNode) {
+      this.leafShow = !treeNode.isParent
+      // 表单操作按钮(update：更新、add：添加)
+      this.updateShow = false
       this.addShow = false
-      this.editShow = false
+      Object.assign(this.form, this.copyTreeNode2Form(treeNode))
+      this.$nextTick(() => {
+        this.$refs.form.clearValidate()
+      })
+    },
+    // 编辑方案一
+    handleUpdate() {
+      Object.assign(this.formOrigin, this.form)
+      this.updateShow = true
+    },
+    handleBack() {
+      Object.assign(this.form, this.formOrigin)
+      this.updateShow = false
+      this.$nextTick(() => {
+        this.$refs.form.clearValidate()
+      })
+    },
+    // 编辑方案二
+    handleEdit(treeNode) {
+      this.leafShow = !treeNode.isParent
+      this.updateShow = true
+      this.addShow = false
+      Object.assign(this.form, this.copyTreeNode2Form(treeNode))
+      this.$nextTick(() => {
+        this.$refs.form.clearValidate()
+      })
+    },
+    // 添加节点界面无返回按钮，设计原因：添加根节点时没有选取的节点，无法展示节点内容。添加完成展示添加节点信息。
+    handleAdd(treeNode) {
+      this.leafShow = true
+      this.updateShow = false
+      this.addShow = true
+      this.resetForm()
+      this.parentName = treeNode.name
+      this.$nextTick(() => {
+        this.$refs.form.clearValidate()
+      })
+    },
+    // 添加根节点，无需选取节点
+    handleAddRoot() {
+      this.leafShow = true
+      this.updateShow = false
+      this.addShow = true
+      this.resetForm()
+      this.parentName = '根节点'
+      // 添加根节点判断逻辑需要
+      this.treeNode = null
+      this.$nextTick(() => {
+        this.$refs.form.clearValidate()
+      })
+    },
+    handleDelete(treeNode) {
+
+    },
+    // 弃用
+    commonShow() {
+      // this.form = Object.assign({}, treeNode)
+      // Object.assign(this.form, treeNode)
+      // this.form = this.copyTreeNode2Form(treeNode)
+      Object.assign(this.form, this.copyTreeNode2Form(treeNode))
     },
     resetForm() {
-      this.form = {
-        parentName: undefined,
-        name: undefined,
-        srcColumn: undefined,
-        isnode: undefined,
-        explain: undefined,
-        testvalue: undefined,
-        fileextension: undefined,
-        convextension: undefined,
-        isvalid: true
-      }
+      Object.assign(this.form, formOrigin)
     },
     updateMap(srcColumn, testvalue) {
       if (srcColumn) {
         this.map[srcColumn] = testvalue
       }
+    },
+    // 验证按钮
+    handleValidateFixm() {
+      this.validateFixm()
     },
     validateFixm() {
       // 提示验证
@@ -663,6 +738,7 @@ export default {
             } else if (res.code === 606) {
               this.$alert('失败原因：' + res.message, '验证结果', {
                 confirmButtonText: '确定',
+                type: 'error'
               })
             }
           })
@@ -671,21 +747,17 @@ export default {
         console.log('稍后验证')
       })
     },
-    handleAddNode() {
-      this.resetShow()
-      const parentName = this.treeNode.name
-      this.form.parentName = parentName
-      // 显示表单添加按钮
-      this.addShow = true
-      // 添加逻辑为直接添加叶子节点
-      this.leafShow = true
+    findRealChild(treeNode) {
+      if (treeNode.isParent) {
+        return this.findRealChild(treeNode.children[0])
+      }
+      return treeNode
     },
-    addNode() {
+    addNode(treeNode) {
       this.$refs['form'].validate((valid) => {
         if (valid) {
           const tempData = Object.assign({}, this.form)
           const zTree = this.zTree
-          const treeNode = this.treeNode
           // fatherXsdnode
           const fatherXsdnode = this.buildXsdnode(treeNode)
           // 构建order序列
@@ -735,15 +807,17 @@ export default {
               }
               // 添加节点位置
               const index = this.addChildIndex(treeNode, isnode)
-              zTree.addNodes(treeNode, index, node)
-              // 刷新树节点
-              // zTree.refresh()
-
+              const newNodes = zTree.addNodes(treeNode, index, node)
+              if (newNodes[0].isParent) {
+                // 添加多层级子节点 展开全部子节点
+                zTree.expandNode(newNodes[0], true, true)
+              }
               // testvalue更新 转换为=>更新map值
               this.updateMap(srcColumn, testvalue)
-              // 操作界面置空（或者调用 this.info() 展示详情信息）
-              // this.treeNode = null
-              this.info()
+              // 焦点变更为添加的节点              
+              const realNode = this.findRealChild(newNodes[0])
+              zTree.selectNode(realNode)
+              this.handleSelect(realNode)
               // 验证
               if (srcColumn) {
                 this.validateFixm()
@@ -758,28 +832,11 @@ export default {
         }
       })
     },
-    handleAddRootNode() {
-      this.resetShow()
-      const parentName = '根节点'
-      this.form.parentName = parentName
-      // 显示表单
-      this.isShow = true
-      // 显示表单添加按钮
-      this.addShow = true
-      // 添加逻辑为直接添加叶子节点
-      this.leafShow = true
-    },
-    handleUpdateNode() {
-      this.commonShow()
-      // 显示表单更新按钮
-      this.editShow = true
-    },
-    updateNode() {
+    updateNode(treeNode) {
       this.$refs['form'].validate((valid) => {
         if (valid) {
           const tempData = Object.assign({}, this.form)
           const zTree = this.zTree
-          const treeNode = this.treeNode
           // xsdnode
           const xsdnode = this.buildXsdnode(treeNode)
           // 构建order序列
@@ -820,11 +877,8 @@ export default {
                 })
                 treeNode.name = this.form.name
                 zTree.updateNode(treeNode)
-                // 刷新树节点
-                // zTree.refresh()
-                // 操作界面置空（或者调用 this.info() 展示详情信息）
-                // this.treeNode = null
-                this.info()
+                // 展示详情
+                this.handleSelect(treeNode)
                 if (this.hasSrcColumn(treeNode)) {
                   this.validateFixm()
                 }
@@ -855,12 +909,9 @@ export default {
                 const testvalue = this.form.testvalue
                 Object.assign(treeNode, this.form)
                 zTree.updateNode(treeNode)
-                // 刷新树节点
-                // zTree.refresh()
-                
+                // 展示详情
+                this.handleSelect(treeNode)
                 this.updateMap(srcColumn, testvalue)
-                // info在更新map后面有利于展示
-                this.info()
                 if (srcColumn) {
                   this.validateFixm()
                 }
@@ -1046,7 +1097,6 @@ export default {
 
         // 操作界面置空（或者调用 this.info() 展示详情信息）
         this.treeNode = null
-        // this.info()
         if (this.hasSrcColumn(sourceNode)) {
           this.validateFixm()
         }
@@ -1289,8 +1339,7 @@ export default {
       return this.lockType !== 'lock'
     },
     onClick(event, treeId, treeNode) {
-      console.log('onClick', treeNode.name)
-      this.treeNode = treeNode
+      this.handleSelect(treeNode)
     },
     fontCss(treeId, treeNode) {
       const isNode = treeNode.isnode
