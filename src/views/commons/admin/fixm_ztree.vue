@@ -26,11 +26,11 @@
           <div slot="content">{{ lockType | lockTipFilter }}</div>
           <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
         </el-tooltip>
-        <el-button type="primary" v-show="addRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
+        <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
         <el-button type="primary" :disabled="!isAddNode || addShow" @click="handleAdd(treeNode)" style="margin: 0;">添加子节点</el-button>
         <!-- 方案二 -->
         <el-button type="primary" :disabled="!isUpdateNode || updateShow" @click="handleEdit(treeNode)" style="margin: 0;">编辑</el-button>
-        <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode" style="margin: 0;">删除</el-button>
+        <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode(treeNode)" style="margin: 0;">删除</el-button>
       </el-col>
     </el-header>
     <el-container style="height: calc(100vh - 164px - 51px); padding: 0">
@@ -122,7 +122,7 @@
               <!-- <el-button v-show="updateShow" @click="handleBack" style="margin: 0;">返回</el-button> -->
               <!-- <el-button v-show="!inputShow" type="primary" @click="handleUpdate" style="margin: 0;">编辑</el-button> -->
               <!-- 方案二 -->
-              <el-button v-show="inputShow" @click="handleInfo(treeNode)" style="margin: 0;">返回</el-button>
+              <el-button v-show="inputShow && !isAddRootShow" @click="handleInfo(treeNode)" style="margin: 0;">返回</el-button>
               <el-button v-show="addShow" type="primary" @click="addNode(treeNode)" style="margin: 0;">提交</el-button>
               <el-button v-show="updateShow" type="primary" @click="updateNode(treeNode)" style="margin: 0;">提交</el-button>
             </el-form-item>
@@ -228,6 +228,7 @@ export default {
       zTree: null,
       treeNode: null,
       isShow: false,
+      isAddRootShow: false,
       isAddNode: false,
       isUpdateNode: false,
       isDeleteNode: false,
@@ -248,7 +249,6 @@ export default {
       map: {},
       loading: false,
       text: '',
-      firstShow: false,
       uploader_key: new Date().getTime(),
       uploaderOptions: {
         target: baseURL + 'fixmlogic/' + this.version + '/uploadValidateFile',
@@ -312,9 +312,6 @@ export default {
     },
     keys() {
       return this.columnsDesc.map(item => item.name)
-    },
-    addRootShow() {
-      return this.firstShow && this.treeData && this.treeData.length === 0
     }
   },
   watch: {
@@ -332,7 +329,7 @@ export default {
         this.treeData = response.data
         // 解决dom数据来回响应问题
         this.$nextTick(() => {
-          this.firstShow = true
+          this.isAddRootShow = this.treeData && this.treeData.length === 0
         })
         // 当只有一个节点时，操作很流畅，因此是zTree导致的
         // this.treeData = [{name: 'xiaozhou'}]
@@ -622,11 +619,15 @@ export default {
     handleSelect(treeNode) {
       this.treeNode = treeNode
       if (!treeNode) {
+        // 取消选中
+        this.zTree.cancelSelectedNode()
         this.isAddNode = false
         this.isUpdateNode = false
         this.isDeleteNode = false
         this.isShow = false
       } else {
+        // 选中节点
+        this.zTree.selectNode(treeNode)
         // 节点操作按钮
         this.isAddNode = treeNode.isParent || treeNode.isnode
         this.isUpdateNode = true
@@ -681,6 +682,8 @@ export default {
     },
     // 添加根节点，无需选取节点
     handleAddRoot() {
+      // 表单展示
+      this.isShow = true
       this.leafShow = true
       this.updateShow = false
       this.addShow = true
@@ -816,8 +819,11 @@ export default {
               this.updateMap(srcColumn, testvalue)
               // 焦点变更为添加的节点              
               const realNode = this.findRealChild(newNodes[0])
-              zTree.selectNode(realNode)
               this.handleSelect(realNode)
+              // 判断隐藏添加根节点按钮
+              if (treeNode === null && this.isAddRootShow) {
+                this.isAddRootShow = false
+              }
               // 验证
               if (srcColumn) {
                 this.validateFixm()
@@ -1095,8 +1101,6 @@ export default {
         // zTree.refresh()
         console.log(fathNode)
 
-        // 操作界面置空（或者调用 this.info() 展示详情信息）
-        this.treeNode = null
         if (this.hasSrcColumn(sourceNode)) {
           this.validateFixm()
         }
@@ -1106,9 +1110,9 @@ export default {
         }
       })
     },
-    async handleDeleteNode() {
+    async handleDeleteNode(treeNode1) {
       const zTree = this.zTree
-      let treeNode = this.treeNode
+      let treeNode = treeNode1
       const isParent = treeNode.isParent
       let message = '确认删除：[' + treeNode.name + ']'
       if (isParent) {
@@ -1170,10 +1174,11 @@ export default {
             message: '操作成功'
           })
           zTree.removeNode(treeNode, false)
-          // 刷新树节点
-          // zTree.refresh()
-          
-          this.treeNode = null
+          // 无节点数据时 zTree.getNodes() 的值不为[],为undefined
+          if (!treeNode.parentTId && !zTree.getNodes()) {
+            this.isAddRootShow = true
+          }
+          this.handleSelect(null)
         }).catch(res => {
           if (res.code === 450) {
             this.getList()
@@ -1335,10 +1340,19 @@ export default {
           duration: 3000,
           offset: 100
         })
+        return false
+      } else {
+        this.handleSelect(treeNodes[0])
+        return true
       }
-      return this.lockType !== 'lock'
+      // return this.lockType !== 'lock'
     },
-    onClick(event, treeId, treeNode) {
+    onClick(event, treeId, treeNode, clickFlag) {
+      console.log('clickFlag', treeNode, clickFlag)
+      if (clickFlag === 0) {
+        // 不选中
+        treeNode = null
+      }
       this.handleSelect(treeNode)
     },
     fontCss(treeId, treeNode) {
