@@ -2,6 +2,7 @@
   <el-container v-loading="loading" :element-loading-text="text">
     <el-header align="left" style="height: 40px; line-height: 0; padding: 0; padding-bottom: 4px">
       <el-col :span="12">
+        <el-button type="success" icon="el-icon-upload" @click="uploadVisible = true" style="margin: 0;">上传验证文件</el-button>
         <el-cascader
           v-model="validateFile"
           placeholder="请选取验证文件！"
@@ -10,7 +11,7 @@
           :props="{ expandTrigger: 'click', value: 'name', label: 'name' }"
           @change="handleChange"
           @focus="focus"
-          style="width: 50%">
+          style="width: 200px">
           <template slot-scope="{ node, data }">
             <span>{{ data.name }}</span>
             <span v-if="!node.isLeaf"> ({{ data.children.length }}) </span>
@@ -18,10 +19,10 @@
         </el-cascader>
         <!-- 有数据时展示，和添加根节点相反 -->
         <el-tooltip content="对当前数据进行一次验证！" placement="top" effect="light">
-          <el-button type="primary" @click="handleValidateFixm" style="margin: 0;">验证</el-button>
+          <el-button type="primary" @click="handleValidateFixm()" style="margin: 0;">验证</el-button>
         </el-tooltip>
       </el-col>
-      <el-col :span="12" style="padding: 0 20px">
+      <el-col :span="12" style="padding-left: 4px">
         <el-tooltip placement="top" effect="light">
           <div slot="content">{{ lockType | lockTipFilter }}</div>
           <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
@@ -33,23 +34,23 @@
         <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode(treeNode)" style="margin: 0;">删除</el-button>
       </el-col>
     </el-header>
-    <el-container style="height: calc(100vh - 164px - 51px); padding: 0">
-      <el-aside style="width: 50%; padding: 0; margin: 0; background: #FFF;">
-        <el-card style="min-height: 100%">
+    <!--  style="height: calc(100vh - 164px - 51px); padding: 0" -->
+    <el-container>
+      <el-col :span="12" style="margin-right: 8px;">
+        <el-card>
           <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" />
-          <!-- 上传验证文件 -->
-          <!-- <uploader :key="uploader_key" :options="uploaderOptions" class="uploader-example" @file-success="onFileSuccess">
-            <uploader-drop>
-              <uploader-btn :directory="true" :single="true">选择文件夹</uploader-btn>
-            </uploader-drop>
-            <uploader-list></uploader-list>
-          </uploader> -->
+          <div style="height: calc(100vh - 164px - 51px - 40px - 38px);">
+          <el-scrollbar class="page-component__scroll">
           <ul id="zTree" class="ztree" />
+          </el-scrollbar>
+          </div>
           <!-- <el-tree :data="treeData" :props="{label: 'name'}" node-key="?" draggable highlight-current :allow-drag="handleAllowDrag" :allow-drop="handleAllowDrop" @node-click="handleNodeClick" /> -->
         </el-card>
-      </el-aside>
-      <el-main style="padding: 0 0 0 20px">
-        <el-card style="min-height: 100%">
+      </el-col>
+      <el-col :span="12">
+        <el-card>
+          <div style="height: calc(100vh - 164px - 51px - 40px - 2px);">
+          <el-scrollbar class="page-component__scroll">
           <el-form v-show="isShow" ref="form" :rules="inputShow ? rules : {}" :model="form" label-position="left" label-width="100px">
             <el-form-item v-show="addShow" label="父节点" prop="parentName">
               <el-col :span="12">
@@ -127,8 +128,10 @@
               <el-button v-show="updateShow" type="primary" @click="updateNode(treeNode)" style="margin: 0;">提交</el-button>
             </el-form-item>
           </el-form>
+          </el-scrollbar>
+          </div>
         </el-card>
-      </el-main>
+      </el-col>
     </el-container>
     <el-dialog 
       :visible.sync="dialogVisible"
@@ -148,6 +151,22 @@
         <el-button size="small" @click="dialogVisible = false">取 消</el-button>
         <el-button size="small" type="primary" @click="handleDragFixm(drawProp)">确 定</el-button>
       </span>
+    </el-dialog>
+    <el-dialog
+      :visible.sync="uploadVisible"
+      width="500px"
+      center>
+      <!-- 上传验证文件 -->
+      <uploader :key="uploader_key" :options="uploaderOptions" class="uploader-example" @file-success="onFileSuccess" >
+        <uploader-drop>
+          <uploader-btn :directory="true" :single="true">上传验证文件</uploader-btn>
+        </uploader-drop>
+        <uploader-list>
+          <template slot="file-list" scope="fileLists">
+            <p>{{ fileLists }}</p>
+          </template>
+        </uploader-list>
+      </uploader>
     </el-dialog>
   </el-container>
 </template>
@@ -259,6 +278,7 @@ export default {
       changeFlag: false,
       validateFileOptions: [],
       dialogVisible: false,
+      uploadVisible: false,
       targetName: '',
       drawProp: {
         treeId: '',
@@ -1457,8 +1477,8 @@ export default {
 <style>
   .uploader-example {
     width: 90%;
-    padding: 15px;
-    margin: 40px auto 0;
+    /* padding: 15px; */
+    /* margin: 40px auto 0; */
     font-size: 12px;
     box-shadow: 0 0 10px rgba(0, 0, 0, .4);
   }
@@ -1472,6 +1492,12 @@ export default {
     overflow: auto;
     overflow-x: hidden;
     overflow-y: auto;
+  }
+  .page-component__scroll {
+    height: 100%;
+  }
+  .page-component__scroll .el-scrollbar__wrap {
+    overflow-x: auto;
   }
 </style>
 <style scoped>
