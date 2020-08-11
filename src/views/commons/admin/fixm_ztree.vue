@@ -83,7 +83,7 @@
               </el-tooltip>
             </el-form-item>
             <!-- 其他操作 节点名项 -->
-            <el-form-item v-show="!addShow" label="节点名" prop="name">
+            <el-form-item v-if="!addShow" label="节点名" prop="name">
               <el-input v-show="inputShow" v-model="form.name" />
               <span v-show="!inputShow">{{ form.name }}</span>
             </el-form-item>
