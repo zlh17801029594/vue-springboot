@@ -59,10 +59,31 @@
           <div style="height: calc(100vh - 164px - 51px - 40px - 2px);">
           <el-scrollbar class="page-component__scroll">
           <el-form v-show="isShow" ref="form" :rules="inputShow ? rules : {}" :model="form" label-position="left" label-width="100px" class="demo-table-expand">
-            <el-form-item v-show="addShow" label="父节点" prop="parentName">
+            <el-form-item v-show="addShow" label="父节点名" prop="parentName">
               <el-input v-model="parentName" :disabled="true" />
             </el-form-item>
-            <el-form-item label="名称" prop="name">
+            <!-- 增加子节点，有增加多层级子节点需求 -->
+            <el-form-item v-show="addShow" 
+              v-for="(name, index) in form.dynamicNames"
+              :label="'子节点名' + (form.dynamicNames.length > 1 ? (index + 1) : '')"
+              :key="name.key"
+              :prop="'dynamicNames.' + index + '.value'"
+              :rules="index === 0 ? [
+                { required: true, message: '节点名称不能为空', trigger: 'blur'}, 
+                { validator: validNames, trigger: ['change', 'blur']}
+              ] : [
+                { required: true, message: '节点名称不能为空', trigger: 'blur'}
+              ]">
+              <el-input v-model="name.value"></el-input>
+              <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="增加层级子节点">
+                <el-button type="success" @click="addDomain(name)" style="margin: 0;" icon="el-icon-plus"></el-button>
+              </el-tooltip>
+              <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="移除当前层级节点">
+                <el-button v-show="form.dynamicNames.length > 1" @click="removeDomain(name)" style="margin: 0;" icon="el-icon-minus"></el-button>
+              </el-tooltip>
+            </el-form-item>
+            <!-- 其他操作 节点名项 -->
+            <el-form-item v-show="!addShow" label="节点名" prop="name">
               <el-input v-show="inputShow" v-model="form.name" />
               <span v-show="!inputShow">{{ form.name }}</span>
             </el-form-item>
@@ -218,6 +239,12 @@ export default {
         callback()
       }
     }
+    var validNames = (rule, value, callback) => {
+      console.log('触发校验', value, rule)
+      if (this.isSameName(this.treeNode, value)){
+        callback(new Error('同级节点不能同名'))
+      }
+    }
     return {
       treeData: [],
       // zTree过滤函数使用
@@ -230,7 +257,11 @@ export default {
         testvalue: undefined,
         fileextension: undefined,
         convextension: undefined,
-        isvalid: true
+        isvalid: true,
+        dynamicNames: [{
+          key: 1,
+          value: ''
+        }]
       },
       parentName: '',
       // 方案一：用于编辑返回按钮
@@ -278,7 +309,8 @@ export default {
         moveType: ''
       },
       dropTypes: [true, true, true],
-      lockType: 'lock'
+      lockType: 'lock',
+      validNames: validNames
     }
   },
   filters: {
@@ -334,6 +366,27 @@ export default {
     this.getList()
   },
   methods: {
+    addDomain(item) {
+      var index = this.form.dynamicNames.indexOf(item)
+      if (index !== -1) {
+        this.form.dynamicNames.splice(index + 1, 0, {
+          value: '',
+          key: Date.now()
+        });
+      }
+    },
+    removeDomain(item) {
+      var index = this.form.dynamicNames.indexOf(item)
+      if (index !== -1) {
+        this.form.dynamicNames.splice(index, 1)
+        if (index === 0) {
+          console.log('触发一次校验')
+          this.$nextTick(() => {
+            this.$refs['form'].validateField('dynamicNames.0.value')
+          })
+        }
+      }
+    },
     getList() {
       getFixm(this.version).then(response => {
         console.log(response)
@@ -1538,7 +1591,10 @@ export default {
   .demo-table-expand .el-form-item {
     /* margin-right: 0; */
     /* margin-bottom: 0; */
-    width: 50%;
+    width: 70%;
+  }
+  .demo-table-expand .el-input {
+    width: calc(100% - 120px);
   }
   .ztree * {
     font-size: 14px
