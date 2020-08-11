@@ -241,9 +241,13 @@ export default {
     }
     var validNames = (rule, value, callback) => {
       console.log('触发校验', value, rule)
+      if (/(->)/.test(value)) {
+        callback(new Error('节点名不能包含 ' + split_sign))
+      }
       if (this.isSameName(this.treeNode, value)){
         callback(new Error('同级节点不能同名'))
       }
+      callback()
     }
     return {
       treeData: [],
@@ -827,6 +831,8 @@ export default {
     addNode(treeNode) {
       this.$refs['form'].validate((valid) => {
         if (valid) {
+          console.log('this.form', this.form)
+          this.form.name = this.form.dynamicNames.map(e => e.value).join(split_sign)
           const tempData = Object.assign({}, this.form)
           const zTree = this.zTree
           // fatherXsdnode
