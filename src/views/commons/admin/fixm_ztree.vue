@@ -18,27 +18,34 @@
           </template>
         </el-cascader>
         <!-- 有数据时展示，和添加根节点相反 -->
-        <el-tooltip content="对当前数据进行一次验证！" placement="top" effect="light">
+        <el-tooltip content="对当前数据进行一次验证！" placement="top" effect="light" :hide-after="3000">
           <el-button type="primary" @click="handleValidateFixm()" style="margin: 0;">验证</el-button>
         </el-tooltip>
       </el-col>
       <el-col :span="12" style="padding-left: 4px">
-        <el-tooltip placement="top" effect="light">
+        <!-- <el-tooltip placement="top" effect="light">
           <div slot="content">{{ lockType | lockTipFilter }}</div>
           <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
-        </el-tooltip>
-        <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
-        <el-button type="primary" :disabled="!isAddNode || addShow" @click="handleAdd(treeNode)" style="margin: 0;">添加子节点</el-button>
+        </el-tooltip> -->
+        <!-- <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button> -->
+        <!-- <el-button type="primary" :disabled="!isAddNode || addShow" @click="handleAdd(treeNode)" style="margin: 0;">添加子节点</el-button> -->
         <!-- 方案二 -->
-        <el-button type="primary" :disabled="!isUpdateNode || updateShow" @click="handleEdit(treeNode)" style="margin: 0;">编辑</el-button>
-        <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode(treeNode)" style="margin: 0;">删除</el-button>
+        <!-- <el-button type="primary" :disabled="!isUpdateNode || updateShow" @click="handleEdit(treeNode)" style="margin: 0;">编辑</el-button> -->
+        <!-- <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode(treeNode)" style="margin: 0;">删除</el-button> -->
       </el-col>
     </el-header>
     <!--  style="height: calc(100vh - 164px - 51px); padding: 0" -->
     <el-container>
       <el-col :span="12" style="margin-right: 8px;">
         <el-card>
-          <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" />
+          <span>
+            <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" :style="'max-width: calc(100% - 123px' + (isAddRootShow ? ' - 118px' : '') + ')'" />
+            <el-tooltip placement="top" effect="light">
+              <div slot="content">{{ lockType | lockTipFilter }}</div>
+              <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
+            </el-tooltip>
+            <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
+          </span>
           <div style="height: calc(100vh - 164px - 51px - 40px - 38px);">
           <el-scrollbar class="page-component__scroll">
           <ul id="zTree" class="ztree" />
@@ -51,79 +58,63 @@
         <el-card>
           <div style="height: calc(100vh - 164px - 51px - 40px - 2px);">
           <el-scrollbar class="page-component__scroll">
-          <el-form v-show="isShow" ref="form" :rules="inputShow ? rules : {}" :model="form" label-position="left" label-width="100px">
+          <el-form v-show="isShow" ref="form" :rules="inputShow ? rules : {}" :model="form" label-position="left" label-width="100px" class="demo-table-expand">
             <el-form-item v-show="addShow" label="父节点" prop="parentName">
-              <el-col :span="12">
-                <el-input v-model="parentName" :disabled="true" />
-              </el-col>
+              <el-input v-model="parentName" :disabled="true" />
             </el-form-item>
             <el-form-item label="名称" prop="name">
-              <el-col :span="12">
-                <el-input v-show="inputShow" v-model="form.name" />
-                <span v-show="!inputShow">{{ form.name }}</span>
-              </el-col>
+              <el-input v-show="inputShow" v-model="form.name" />
+              <span v-show="!inputShow">{{ form.name }}</span>
             </el-form-item>
             <el-form-item v-show="leafShow" label="数据源字段" prop="srcColumn">
-              <el-col :span="12">
-                <el-select v-show="inputShow" v-model="form.srcColumn" style="width: 100%" placeholder="请选择数据源字段" :clearable="true">
-                  <el-option v-for="(columnName, index) in keys" :key="index" :label="columnName" :value="columnName" />
-                </el-select>
-                <!-- 值调整，只有出现在list中才展示 -->
-                <span v-show="!inputShow">{{ form.srcColumn }}</span>
-              </el-col>
+              <el-select v-show="inputShow" v-model="form.srcColumn" style="width: 100%" placeholder="请选择数据源字段" :clearable="true">
+                <el-option v-for="(columnName, index) in keys" :key="index" :label="columnName" :value="columnName" />
+              </el-select>
+              <!-- 值调整，只有出现在list中才展示 -->
+              <span v-show="!inputShow">{{ form.srcColumn }}</span>
             </el-form-item>
             <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
-              <el-col :span="12">
-                <div v-show="inputShow">
-                  <el-input v-if="analyInput() === 'String'" v-model="upperTestValue" />
-                  <el-input v-else-if="analyInput() === 'Integer' || analyInput() === 'Long'" v-model.number="numberTestValue" />
-                  <el-select v-else-if="analyInput() === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
-                    <el-option label="true" :value="true" />
-                    <el-option label="false" :value="false" />
-                  </el-select>
-                  <el-date-picker type="datetime" v-else-if="analyInput() === 'Date'" value-format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: 100%" />
-                  <el-input v-else :disabled="true" />
-                </div>
-                <span v-show="!inputShow">{{ form.testvalue }}</span>
-              </el-col>
+              <div v-show="inputShow">
+                <el-input v-if="analyInput() === 'String'" v-model="upperTestValue" />
+                <el-input v-else-if="analyInput() === 'Integer' || analyInput() === 'Long'" v-model.number="numberTestValue" />
+                <el-select v-else-if="analyInput() === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
+                  <el-option label="true" :value="true" />
+                  <el-option label="false" :value="false" />
+                </el-select>
+                <el-date-picker type="datetime" v-else-if="analyInput() === 'Date'" value-format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: 100%" />
+                <el-input v-else :disabled="true" />
+              </div>
+              <span v-show="!inputShow">{{ form.testvalue }}</span>
             </el-form-item>
             <el-form-item v-if="leafShow" label="节点/属性" prop="isnode">
-              <el-col :span="12">
-                <el-select v-show="inputShow" v-model="form.isnode" style="width: 100%" :disabled="updateShow" placeholder="请选择类型">
-                  <el-option label="节点" :value="true" />
-                  <el-option label="属性" :value="false" />
-                </el-select>
-                <span v-show="!inputShow">{{ form.isnode ? '节点' : '属性' }}</span>
-              </el-col>
+              <el-select v-show="inputShow" v-model="form.isnode" style="width: 100%" :disabled="updateShow" placeholder="请选择类型">
+                <el-option label="节点" :value="true" />
+                <el-option label="属性" :value="false" />
+              </el-select>
+              <span v-show="!inputShow">{{ form.isnode ? '节点' : '属性' }}</span>
             </el-form-item>
             <el-form-item v-show="leafShow" label="字段解释" prop="explain">
-              <el-col :span="12">
-                <el-input v-show="inputShow" v-model="form.explain" />
-                <span v-show="!inputShow">{{ form.explain }}</span>
-              </el-col>
+              <el-input v-show="inputShow" v-model="form.explain" />
+              <span v-show="!inputShow">{{ form.explain }}</span>
             </el-form-item>
             <el-form-item v-show="leafShow" label="扩展文件名" prop="fileextension">
-              <el-col :span="12">
-                <el-input v-show="inputShow" v-model="form.fileextension" />
-                <span v-show="!inputShow">{{ form.fileextension }}</span>
-              </el-col>
+              <el-input v-show="inputShow" v-model="form.fileextension" />
+              <span v-show="!inputShow">{{ form.fileextension }}</span>
             </el-form-item>
             <el-form-item v-show="leafShow" label="转换方法" prop="convextension">
-              <el-col :span="12">
-                <el-input v-show="inputShow" v-model="form.convextension" />
-                <span v-show="!inputShow">{{ form.convextension }}</span>
-              </el-col>
+              <el-input v-show="inputShow" v-model="form.convextension" />
+              <span v-show="!inputShow">{{ form.convextension }}</span>
             </el-form-item>
             <el-form-item v-show="leafShow" label="是否生效" prop="isvalid">
-              <el-switch v-show="inputShow" v-model="form.isvalid" />
+              <el-switch v-show="inputShow" v-model="form.isvalid" active-color="#13ce66" />
               <span v-show="!inputShow">{{ form.isvalid ? '是' : '否' }}</span>
             </el-form-item>
             <el-form-item>
               <!-- 方案一 -->
-              <!-- <el-button v-show="updateShow" @click="handleBack" style="margin: 0;">返回</el-button> -->
-              <!-- <el-button v-show="!inputShow" type="primary" @click="handleUpdate" style="margin: 0;">编辑</el-button> -->
+              <el-button v-show="updateShow" @click="handleBack" style="margin: 0;">返回</el-button>
+              <el-button v-show="!inputShow" type="primary" @click="handleUpdate" style="margin: 0;">编辑</el-button>
               <!-- 方案二 -->
-              <el-button v-show="inputShow && !isAddRootShow" @click="handleInfo(treeNode)" style="margin: 0;">返回</el-button>
+              <!-- <el-button v-show="inputShow && !isAddRootShow" @click="handleInfo(treeNode)" style="margin: 0;">返回</el-button> -->
               <el-button v-show="addShow" type="primary" @click="addNode(treeNode)" style="margin: 0;">提交</el-button>
               <el-button v-show="updateShow" type="primary" @click="updateNode(treeNode)" style="margin: 0;">提交</el-button>
             </el-form-item>
@@ -138,7 +129,7 @@
       width="500px"
       center>
       <span slot="title">
-        拖动到<span style="color: teal">{{ targetName }}</span>的什么位置？
+        拖动到<span style="color: teal"> {{ targetName }} </span>的什么位置？
       </span>
       <div style="width: 100%; text-align: center;">
         <el-radio-group v-model="drawProp.moveType">
@@ -691,11 +682,15 @@ export default {
     },
     // 添加节点界面无返回按钮，设计原因：添加根节点时没有选取的节点，无法展示节点内容。添加完成展示添加节点信息。
     handleAdd(treeNode) {
+      // 表单展示
+      this.isShow = true
       this.leafShow = true
       this.updateShow = false
       this.addShow = true
       this.resetForm()
       this.parentName = treeNode.name
+      // 添加节点判断逻辑需要
+      this.treeNode = treeNode
       this.$nextTick(() => {
         this.$refs.form.clearValidate()
       })
@@ -807,7 +802,8 @@ export default {
           tempData.fatherXsdnode = fatherXsdnode
           tempData.nodeOrder = nodeOrder
           tempData.propertyOrder = propertyOrder
-          this.$confirm('确认添加：[' + tempData.name + ']', '提示', {
+          this.$confirm('确认添加：<span style="color: teal">[' + tempData.name + ']</span>', '提示', {
+            dangerouslyUseHTMLString: true,
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'success'
@@ -891,7 +887,8 @@ export default {
             tempData.newName = tempData.name
             tempData.nodeOrder = nodeOrder
             tempData.propertyOrder = propertyOrder
-            this.$confirm('确认更新：[' + treeNode.name + ']', '提示', {
+            this.$confirm('确认更新：<span style="color: teal">[' + treeNode.name + ']</span>', '提示', {
+              dangerouslyUseHTMLString: true,
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'success'
@@ -920,7 +917,8 @@ export default {
             tempData.newName = tempData.name
             tempData.nodeOrder = nodeOrder
             tempData.propertyOrder = propertyOrder
-            this.$confirm('确认更新：[' + treeNode.name + ']', '提示', {
+            this.$confirm('确认更新：<span style="color: teal">[' + treeNode.name + ']</span>', '提示', {
+              dangerouslyUseHTMLString: true,
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'success'
@@ -1134,11 +1132,12 @@ export default {
       const zTree = this.zTree
       let treeNode = treeNode1
       const isParent = treeNode.isParent
-      let message = '确认删除：[' + treeNode.name + ']'
+      let message = '确认删除：<span style="color: teal">[' + treeNode.name + ']</span>'
       if (isParent) {
         message += '及其子节点'
       }
       await this.$confirm(message, '提示', {
+        dangerouslyUseHTMLString: true,
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'error'
@@ -1146,7 +1145,8 @@ export default {
         let saveFather = this.saveFather(treeNode)
         if (saveFather) {
           const blankFather = this.blankFather(treeNode.getParentNode())
-          await this.$confirm('是否删除空白目录：[' + blankFather.name + ']', '提示', {
+          await this.$confirm('是否删除空白目录：<span style="color: teal">[' + blankFather.name + ']</span>', '提示', {
+            dangerouslyUseHTMLString: true,
             confirmButtonText: '删除',
             cancelButtonText: '保留',
             type: 'warning'
@@ -1433,6 +1433,26 @@ export default {
       }
       return false
     },
+    addHoverDom(treeId, treeNode) {
+      var sObj = $("#" + treeNode.tId + "_span");
+      console.log(treeNode.isnode)
+			if (treeNode.isnode === false || $("#addBtn_"+treeNode.tId).length>0) return;
+			var addStr = "<span class='button add' id='addBtn_" + treeNode.tId
+				+ "' title='添加子节点' onfocus='this.blur();'></span>";
+			sObj.after(addStr);
+			var btn = $("#addBtn_"+treeNode.tId);
+			if (btn) btn.bind("click", () => {
+        this.handleAdd(treeNode)
+        return false
+      });
+		},
+		removeHoverDom(treeId, treeNode) {
+			$("#addBtn_"+treeNode.tId).unbind().remove();
+    },
+    beforeRemove(treeId, treeNode) {
+      this.handleDeleteNode(treeNode)
+      return false
+    },
     initTree(treeData) {
       const _this = this
       const setting = {
@@ -1444,7 +1464,9 @@ export default {
         },
         view: {
           fontCss: _this.fontCss,
-          selectedMulti: false
+          selectedMulti: false,
+          addHoverDom: _this.addHoverDom,
+          removeHoverDom: _this.removeHoverDom
         },
         edit: {
           drag: {
@@ -1455,10 +1477,12 @@ export default {
             next: _this.dropNext
           },
           enable: true,
+          removeTitle: '删除节点',
           showRenameBtn: false,
-          showRemoveBtn: false
+          showRemoveBtn: true
         },
         callback: {
+          beforeRemove: _this.beforeRemove,
           beforeDrag: _this.beforeDrag,
           beforeDrop: _this.beforeDrop,
           onDrop: _this.onDrop,
@@ -1467,7 +1491,6 @@ export default {
       }
       $.fn.zTree.init($('#zTree'), setting, treeData)
       this.zTree = $.fn.zTree.getZTreeObj('zTree')
-      // this.zTree.expandAll(true)
       // false 过滤不加颜色不高亮提示
       fuzzySearch('zTree', '#key', false, true) // 初始化模糊搜索方法
     }
@@ -1498,6 +1521,27 @@ export default {
   }
   .page-component__scroll .el-scrollbar__wrap {
     overflow-x: auto;
+  }
+  .ztree li span.button.add {
+    margin-left:2px; 
+    margin-right: 2px; 
+    background-position:-144px 0; 
+    vertical-align:top; 
+    *vertical-align:middle
+  }
+  .demo-table-expand {
+    font-size: 0;
+  }
+  .demo-table-expand label {
+    color: #99a9bf;
+  }
+  .demo-table-expand .el-form-item {
+    /* margin-right: 0; */
+    /* margin-bottom: 0; */
+    width: 50%;
+  }
+  .ztree * {
+    font-size: 14px
   }
 </style>
 <style scoped>
