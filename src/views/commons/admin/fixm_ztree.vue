@@ -75,7 +75,7 @@
                 { required: true, message: '节点名称不能为空', trigger: 'blur'}
               ]">
               <el-input v-model="name.value"></el-input>
-              <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="增加层级子节点">
+              <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="增加多层级子节点">
                 <el-button type="success" @click="addDomain(name)" style="margin: 0;" icon="el-icon-plus"></el-button>
               </el-tooltip>
               <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="移除当前层级节点">
@@ -283,13 +283,31 @@ export default {
       rules: {
         name: [
           // { required: true, message: '名称不能为空', trigger: 'blur' },
-          { validator: validName, required: true, trigger: ['blur', 'change'] }
+          { required: true, validator: validName, trigger: ['blur', 'change'] }
           // { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
         ],
         isnode: [
           { required: true, message: '请选择类型', trigger: 'change' }
         ]
       },
+      // 1.不为空 2.不包含-> 3.不能重名
+      nameRules: [
+        { required: true, message: '节点名称不能为空', trigger: 'blur'}, 
+        { validator: validNames, trigger: ['change', 'blur']}
+      ],
+      // 1.不为空 2.不包含->
+      nameChildRules: [
+        { required: true, message: '节点名称不能为空', trigger: 'blur'}, 
+        { validator: validNames, trigger: ['change', 'blur']}
+      ],
+      // 1.不为空 2.不包含-> 3.不能重名(原名除外)
+      nameEditRules: [
+        { required: true, validator: validName, trigger: ['blur', 'change'] }
+      ],
+      // 1.不为空
+      nodeRules: [
+        { required: true, message: '请选择类型', trigger: 'change' }
+      ],
       columnsDesc: [],
       map: {},
       loading: false,
