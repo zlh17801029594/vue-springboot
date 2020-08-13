@@ -58,7 +58,7 @@
         <el-card>
           <div style="height: calc(100vh - 164px - 51px - 40px - 2px);">
           <el-scrollbar class="page-component__scroll">
-          <el-form v-show="isShow" ref="form" :rules="inputShow ? rules : {}" :model="form" label-position="left" label-width="100px" class="demo-table-expand">
+          <el-form v-show="isShow" ref="form" :validate-on-rule-change="false" :model="form" label-position="left" label-width="100px" class="demo-table-expand1">
             <el-form-item v-show="addShow" label="父节点名" prop="parentName">
               <el-input v-model="parentName" :disabled="true" />
             </el-form-item>
@@ -68,12 +68,7 @@
               :label="'子节点名' + (form.dynamicNames.length > 1 ? (index + 1) : '')"
               :key="name.key"
               :prop="'dynamicNames.' + index + '.value'"
-              :rules="index === 0 ? [
-                { required: true, message: '节点名称不能为空', trigger: 'blur'}, 
-                { validator: validNames, trigger: ['change', 'blur']}
-              ] : [
-                { required: true, message: '节点名称不能为空', trigger: 'blur'}
-              ]">
+              :rules="addShow ? (index === 0 ? nameAddRule : nameAddChildRule) : {}">
               <el-input v-model="name.value"></el-input>
               <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="增加多层级子节点">
                 <el-button type="success" @click="addDomain(name)" style="margin: 0;" icon="el-icon-plus"></el-button>
@@ -83,7 +78,8 @@
               </el-tooltip>
             </el-form-item>
             <!-- 其他操作 节点名项 -->
-            <el-form-item v-if="!addShow" label="节点名" prop="name">
+            <el-form-item v-show="!addShow" label="节点名" prop="name"
+              :rules="updateShow ? nameEditRule : {}">
               <el-input v-show="inputShow" v-model="form.name" />
               <span v-show="!inputShow">{{ form.name }}</span>
             </el-form-item>
@@ -96,19 +92,29 @@
             </el-form-item>
             <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
               <div v-show="inputShow">
-                <el-input v-if="analyInput() === 'String'" v-model="upperTestValue" />
-                <el-input v-else-if="analyInput() === 'Integer' || analyInput() === 'Long'" v-model.number="numberTestValue" />
-                <el-select v-else-if="analyInput() === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
+                <el-input v-if="dbColumn && dbColumn.javaType === 'String'" 
+                  :type="(dbColumn.length === 0 || dbColumn.length > 50) ? 'textarea' : 'text'"
+                  :maxlength="(dbColumn.length !== 0) ? dbColumn.length : undefined"
+                  show-word-limit
+                  :autosize="{minRows: 2}" 
+                  v-model="upperTestValue" />
+                <el-input-number class="inputNumber" v-else-if="dbColumn && dbColumn.javaType === 'Integer'" 
+                  :min="dbColumn.minValue ? dbColumn.minValue : undefined"
+                  :max="dbColumn.maxValue ? dbColumn.maxValue : undefined"
+                  v-model="numberTestValue" />
+                <el-select v-else-if="dbColumn && dbColumn.javaType === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
                   <el-option label="true" :value="true" />
                   <el-option label="false" :value="false" />
                 </el-select>
-                <el-date-picker type="datetime" v-else-if="analyInput() === 'Date'" value-format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: 100%" />
-                <el-input v-else :disabled="true" />
+                <!-- el-date-picker尺寸不能通过 form .el-input全局控制，需单独赋值 -->
+                <el-date-picker type="datetime" v-else-if="dbColumn && dbColumn.javaType === 'Date'" value-format="yyyy-MM-dd HH:mm" format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: calc(100% - 120px);" />
+                <el-input v-show="!dbColumn" :disabled="true" />
               </div>
               <span v-show="!inputShow">{{ form.testvalue }}</span>
             </el-form-item>
-            <el-form-item v-if="leafShow" label="节点/属性" prop="isnode">
-              <el-select v-show="inputShow" v-model="form.isnode" style="width: 100%" :disabled="updateShow" placeholder="请选择类型">
+            <el-form-item v-show="leafShow" label="节点/属性" prop="isnode"
+              :rules="leafShow ? (inputShow ? nodeRule : {required: false}) : {required: false}">
+              <el-select v-show="inputShow" v-model="form.isnode" clearable style="width: 100%" :disabled="updateShow" placeholder="请选择类型">
                 <el-option label="节点" :value="true" />
                 <el-option label="属性" :value="false" />
               </el-select>
@@ -217,35 +223,31 @@ const formOrigin = {
 export default {
   name: 'FixmPanel',
   data() {
-    var validName = (rule, value, callback) => {
-      if (!value) {
-        callback(new Error('名称不能为空'))
-      } else {
-        if (this.addShow || this.updateShow) {
-          let treeNode
-          if (this.addShow) {
-            treeNode = this.treeNode
-          } else if (this.updateShow) {
-            treeNode = this.treeNode.getParentNode()
-            const name = this.treeNode.name
-            if (name === value) {
-              callback()
-            }
-          }
-          if (this.isSameName(treeNode, value)) {
-            callback(new Error('同级节点不能同名'))
-          }
+    var validEditName = (rule, value, callback) => {
+      if (value) {
+        if (/(->)/.test(value)) {
+          callback(new Error('节点名不能包含 ' + split_sign))
+        }
+        const pNode = this.treeNode.getParentNode()
+        const name = this.treeNode.name
+        if (name !== value && this.isSameName(pNode, value)) {
+          callback(new Error('同级节点不能同名'))
         }
         callback()
       }
     }
-    var validNames = (rule, value, callback) => {
-      console.log('触发校验', value, rule)
+    var validAddName = (rule, value, callback) => {
       if (/(->)/.test(value)) {
         callback(new Error('节点名不能包含 ' + split_sign))
       }
       if (this.isSameName(this.treeNode, value)){
         callback(new Error('同级节点不能同名'))
+      }
+      callback()
+    }
+    var validAddChildName = (rule, value, callback) => {
+      if (/(->)/.test(value)) {
+        callback(new Error('节点名不能包含 ' + split_sign))
       }
       callback()
     }
@@ -263,7 +265,7 @@ export default {
         convextension: undefined,
         isvalid: true,
         dynamicNames: [{
-          key: 1,
+          key: 0,
           value: ''
         }]
       },
@@ -280,32 +282,23 @@ export default {
       leafShow: false,
       addShow: false,
       updateShow: false,
-      rules: {
-        name: [
-          // { required: true, message: '名称不能为空', trigger: 'blur' },
-          { required: true, validator: validName, trigger: ['blur', 'change'] }
-          // { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
-        ],
-        isnode: [
-          { required: true, message: '请选择类型', trigger: 'change' }
-        ]
-      },
       // 1.不为空 2.不包含-> 3.不能重名
-      nameRules: [
+      nameAddRule: [
         { required: true, message: '节点名称不能为空', trigger: 'blur'}, 
-        { validator: validNames, trigger: ['change', 'blur']}
+        { validator: validAddName, trigger: 'change'}
       ],
       // 1.不为空 2.不包含->
-      nameChildRules: [
+      nameAddChildRule: [
         { required: true, message: '节点名称不能为空', trigger: 'blur'}, 
-        { validator: validNames, trigger: ['change', 'blur']}
+        { validator: validAddChildName, trigger: 'change'}
       ],
       // 1.不为空 2.不包含-> 3.不能重名(原名除外)
-      nameEditRules: [
-        { required: true, validator: validName, trigger: ['blur', 'change'] }
+      nameEditRule: [
+        { required: true, message: '节点名称不能为空', trigger: 'blur' },
+        { validator: validEditName, trigger: 'change' }
       ],
       // 1.不为空
-      nodeRules: [
+      nodeRule: [
         { required: true, message: '请选择类型', trigger: 'change' }
       ],
       columnsDesc: [],
@@ -331,8 +324,7 @@ export default {
         moveType: ''
       },
       dropTypes: [true, true, true],
-      lockType: 'lock',
-      validNames: validNames
+      lockType: 'lock'
     }
   },
   filters: {
@@ -377,6 +369,17 @@ export default {
     },
     keys() {
       return this.columnsDesc.map(item => item.name)
+    },
+    dbColumn() {
+      const srcColumn = this.form.srcColumn
+      if (srcColumn) {
+        for (const v of this.columnsDesc) {
+          if (v.name === srcColumn) {
+            console.log('column', v)
+            return v
+          }
+        }
+      }
     }
   },
   watch: {
@@ -493,18 +496,6 @@ export default {
         })
         
       }
-    },
-    // 计算当前输入框类型
-    analyInput() {
-      const srcColumn = this.form.srcColumn
-      if (srcColumn) {
-        for (const v of this.columnsDesc) {
-          if (v.name === srcColumn) {
-            return v.javaType
-          }
-        }
-      }
-      return false
     },
     // 增加多层级子节点时注意 isnode应该为true(第一层级)
     addChildIndex(treeNode, isnode) {
@@ -728,7 +719,12 @@ export default {
       // 表单操作按钮(update：更新、add：添加)
       this.updateShow = false
       this.addShow = false
-      Object.assign(this.form, this.copyTreeNode2Form(treeNode))
+      if (this.leafShow) {
+        Object.assign(this.form, this.copyTreeNode2Form(treeNode))
+      } else {
+        Object.assign(this.form, formOrigin)
+        this.form.name = treeNode.name
+      }
       this.$nextTick(() => {
         this.$refs.form.clearValidate()
       })
@@ -750,7 +746,12 @@ export default {
       this.leafShow = !treeNode.isParent
       this.updateShow = true
       this.addShow = false
-      Object.assign(this.form, this.copyTreeNode2Form(treeNode))
+      if (this.leafShow) {
+        Object.assign(this.form, this.copyTreeNode2Form(treeNode))
+      } else {
+        Object.assign(this.form, formOrigin)
+        this.form.name = treeNode.name
+      }
       this.$nextTick(() => {
         this.$refs.form.clearValidate()
       })
@@ -797,6 +798,10 @@ export default {
     },
     resetForm() {
       Object.assign(this.form, formOrigin)
+      this.form.dynamicNames = [{
+        key: 0,
+        value: ''
+      }]
     },
     updateMap(srcColumn, testvalue) {
       if (srcColumn) {
@@ -849,7 +854,6 @@ export default {
     addNode(treeNode) {
       this.$refs['form'].validate((valid) => {
         if (valid) {
-          console.log('this.form', this.form)
           this.form.name = this.form.dynamicNames.map(e => e.value).join(split_sign)
           const tempData = Object.assign({}, this.form)
           const zTree = this.zTree
@@ -1512,7 +1516,6 @@ export default {
     },
     addHoverDom(treeId, treeNode) {
       var sObj = $("#" + treeNode.tId + "_span");
-      console.log(treeNode.isnode)
 			if (treeNode.isnode === false || $("#addBtn_"+treeNode.tId).length>0) return;
 			var addStr = "<span class='button add' id='addBtn_" + treeNode.tId
 				+ "' title='添加子节点' onfocus='this.blur();'></span>";
@@ -1606,19 +1609,28 @@ export default {
     vertical-align:top; 
     *vertical-align:middle
   }
-  .demo-table-expand {
+  .demo-table-expand1 {
     font-size: 0;
   }
-  .demo-table-expand label {
+  .demo-table-expand1 label {
     color: #99a9bf;
   }
-  .demo-table-expand .el-form-item {
+  .demo-table-expand1 .el-form-item {
     /* margin-right: 0; */
     /* margin-bottom: 0; */
     width: 70%;
   }
-  .demo-table-expand .el-input {
+  .demo-table-expand1 .el-input {
     width: calc(100% - 120px);
+  }
+  .demo-table-expand1 .el-textarea {
+    width: calc(100% - 120px);
+  }
+  .demo-table-expand1 .el-input-number {
+    width: calc(100% - 120px);
+  }
+  .demo-table-expand1 .el-input-number .el-input {
+    width: 100%;
   }
   .ztree * {
     font-size: 14px
