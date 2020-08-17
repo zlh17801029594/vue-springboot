@@ -81,14 +81,14 @@
             <el-form-item v-show="!addShow" label="节点名" prop="name"
               :rules="updateShow ? nameEditRule : {}">
               <el-input v-show="inputShow" v-model="form.name" />
-              <span v-show="!inputShow">{{ form.name }}</span>
+              <div v-show="!inputShow" class="aspan">{{ form.name }}</div>
             </el-form-item>
             <el-form-item v-show="leafShow" label="数据源字段" prop="srcColumn">
               <el-select v-show="inputShow" v-model="form.srcColumn" style="width: 100%" placeholder="请选择数据源字段" :clearable="true">
                 <el-option v-for="(columnName, index) in keys" :key="index" :label="columnName" :value="columnName" />
               </el-select>
               <!-- 值调整，只有出现在list中才展示 -->
-              <span v-show="!inputShow">{{ form.srcColumn }}</span>
+              <div v-show="!inputShow" class="aspan">{{ form.srcColumn }}</div>
             </el-form-item>
             <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
               <div v-show="inputShow">
@@ -110,7 +110,7 @@
                 <el-date-picker type="datetime" v-else-if="dbColumn && dbColumn.javaType === 'Date'" value-format="yyyy-MM-dd HH:mm" format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: calc(100% - 120px);" />
                 <el-input v-show="!dbColumn" :disabled="true" />
               </div>
-              <span v-show="!inputShow">{{ form.testvalue }}</span>
+              <div v-show="!inputShow" class="aspan">{{ form.testvalue }}</div>
             </el-form-item>
             <el-form-item v-show="leafShow" label="节点/属性" prop="isnode"
               :rules="leafShow ? (inputShow ? nodeRule : {required: false}) : {required: false}">
@@ -118,23 +118,23 @@
                 <el-option label="节点" :value="true" />
                 <el-option label="属性" :value="false" />
               </el-select>
-              <span v-show="!inputShow">{{ form.isnode ? '节点' : '属性' }}</span>
+              <div v-show="!inputShow" class="aspan">{{ form.isnode ? '节点' : '属性' }}</div>
             </el-form-item>
             <el-form-item v-show="leafShow" label="字段解释" prop="explain">
               <el-input v-show="inputShow" v-model="form.explain" />
-              <span v-show="!inputShow">{{ form.explain }}</span>
+              <div v-show="!inputShow" class="aspan">{{ form.explain }}</div>
             </el-form-item>
             <el-form-item v-show="leafShow" label="扩展文件名" prop="fileextension">
               <el-input v-show="inputShow" v-model="form.fileextension" />
-              <span v-show="!inputShow">{{ form.fileextension }}</span>
+              <div v-show="!inputShow" class="aspan">{{ form.fileextension }}</div>
             </el-form-item>
             <el-form-item v-show="leafShow" label="转换方法" prop="convextension">
               <el-input v-show="inputShow" v-model="form.convextension" />
-              <span v-show="!inputShow">{{ form.convextension }}</span>
+              <div v-show="!inputShow" class="aspan">{{ form.convextension }}</div>
             </el-form-item>
             <el-form-item v-show="leafShow" label="是否生效" prop="isvalid">
               <el-switch v-show="inputShow" v-model="form.isvalid" active-color="#13ce66" />
-              <span v-show="!inputShow">{{ form.isvalid ? '是' : '否' }}</span>
+              <div v-show="!inputShow" class="aspan">{{ form.isvalid ? '是' : '否' }}</div>
             </el-form-item>
             <el-form-item>
               <!-- 方案一 -->
@@ -725,6 +725,7 @@ export default {
         Object.assign(this.form, formOrigin)
         this.form.name = treeNode.name
       }
+      console.log('form表单信息', this.form)
       this.$nextTick(() => {
         this.$refs.form.clearValidate()
       })
@@ -1631,6 +1632,18 @@ export default {
   }
   .demo-table-expand1 .el-input-number .el-input {
     width: 100%;
+  }
+  .demo-table-expand1 .aspan {
+    width: calc(100% - 120px);
+    min-height: 36px;
+    line-height: 36px;
+    border: dotted 1px #d7dae2;
+    border-radius: 5px;
+    /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
+    padding: 0 15px;
+    font-family: sans-serif;
+    white-space: pre-line;
+    word-break:break-all;
   }
   .ztree * {
     font-size: 14px
