@@ -260,6 +260,22 @@ export const asyncRoutes1 = [
     ]
   },
 
+  {
+    path: '/fixm_test',
+    component: Layout,
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/commons/admin/fixm_ztree_subversion'),
+        name: 'fixm_test',
+        meta: {
+          title: 'FIXM子版本演示',
+          icon: 'component'
+        }
+      }
+    ]
+  },
+
   // 404 page must be placed at the end !!!
   // { path: '*', redirect: '/404', hidden: true }
   { path: '*', redirect: '/', hidden: true }

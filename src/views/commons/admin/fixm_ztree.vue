@@ -21,6 +21,12 @@
         <el-tooltip content="对当前数据进行一次验证！" placement="top" effect="light" :hide-after="3000">
           <el-button type="primary" @click="handleValidateFixm()" style="margin: 0;">验证</el-button>
         </el-tooltip>
+        <el-input v-model="subversion1" style="width: 80px;" placeholder="子版本" />
+        <el-button type="primary" @click="chsSubversion(subversion1)" style="margin: 0;">选取</el-button>
+        <el-button v-show="subversionFlag" type="danger" @click="delSubversion" style="margin: 0;">删除</el-button>
+        <el-button v-show="subversionFlag" @click="subversionEdit ? saveSubversion() : updateSubversion()" style="margin: 0;">{{ subversionEdit ? '保存' : '编辑' }}</el-button>
+        <el-button v-show="subversionFlag" type="primary" @click="chsSubversion(subversion)" style="margin: 0;">取消</el-button>
+
       </el-col>
       <el-col :span="12" style="padding-left: 4px">
         <!-- <el-tooltip placement="top" effect="light">
@@ -189,7 +195,7 @@
   </el-container>
 </template>
 <script>
-import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm, validateFiles, getValidateMapValue, updateValidateMap, uploadValidateFile } from '@/api/fixm'
+import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm, validateFiles, getValidateMapValue, updateValidateMap, uploadValidateFile, updateSubversion, delSubversion } from '@/api/fixm'
 const split_sign = '->'
 let baseURL = process.env.VUE_APP_BASE_API
 if(!baseURL.endsWith('/')){
@@ -324,7 +330,11 @@ export default {
         moveType: ''
       },
       dropTypes: [true, true, true],
-      lockType: 'lock'
+      lockType: 'lock',
+      subversion1: '',
+      subversion: '',
+      subversionFlag: false,
+      subversionEdit: false
     }
   },
   filters: {
@@ -387,10 +397,135 @@ export default {
       this.form.testvalue = this.map[value]
     }
   },
-  created() {
+  mounted() {
     this.getList()
   },
   methods: {
+    handleHideAll(){
+      const showNodes = this.zTree.getNodesByParam('isHidden', false)
+      this.zTree.hideNodes(showNodes)
+    },
+    handleShowAll(){
+      const hideNodes = this.zTree.getNodesByParam('isHidden', true)
+      this.zTree.showNodes(hideNodes)
+    },
+    filterSubversion(node, subversion) {
+      return (node.subversions && node.subversions.indexOf(subversion) !== -1)
+    },
+    // 类似点击菜单回调
+    chsSubversion(subversion1) {
+      const zTree = this.zTree
+      this.subversion = subversion1
+      const subversion = this.subversion
+      if (subversion) {
+        this.handleHideAll()
+        const dNodes = zTree.getNodesByFilter(this.filterSubversion, false, null, subversion)
+        if (dNodes) {
+          dNodes.forEach(node => {
+            zTree.showNodes(node.getPath())
+          })
+        }
+        // 临时 代表进入子版本，可删除、编辑
+        this.subversionFlag = true
+      } else {
+        this.handleShowAll()
+        // 未进入如何子版本
+        this.subversionFlag = false
+      }
+      // 后续操作可以理解为初始化
+
+      // 切换子版本 隐藏勾选框(放在展示节点后)
+      const rootNodes = zTree.getNodes()
+      if (rootNodes && rootNodes.length) {
+        this.recursionChk(rootNodes, true)
+      }
+      // 重置编辑
+      this.subversionEdit = false
+    },
+    // 移除子版本
+    delSubversion() {
+
+    },
+    // 编辑/取消编辑 子节点操作
+    updateSubversion() {
+      const zTree = this.zTree
+      // 展示所有节点
+      this.handleShowAll()
+      // 展示勾选框(放在展示节点后)
+      const rootNodes = zTree.getNodes()
+      if (rootNodes && rootNodes.length) {
+        this.recursionChk(rootNodes, false)
+      }
+      // 取消上次所有勾选
+      zTree.checkAllNodes(false)
+      // 勾选当前版本节点
+      const subversion = this.subversion
+      if (subversion) {
+        const dNodes = zTree.getNodesByFilter(this.filterSubversion, false, null, subversion)
+        if (dNodes) {
+          dNodes.forEach(node => {
+            zTree.checkNode(node, true, true)
+          })
+        }
+        this.subversionEdit = true
+      }
+      // 记录当前勾选情况，用于更新成功后，实时修改subversions属性
+      this.recursionBak(zTree.getNodes())
+    },
+    recursionBak(nodes) {
+      nodes.forEach(node => {
+        node.checkedOld = node.checked
+        if (node.isParent) {
+          this.recursionBak(node.children)
+        }
+      })
+    },
+    filterChecked(node, chkFlag) {
+      return (!node.isParent && node.checked === chkFlag)
+    },
+    // 保存 子节点操作
+    saveSubversion() {
+      const zTree = this.zTree
+      const chkNodes = zTree.getNodesByFilter(this.filterChecked, false, null, true)
+      const xsdnodes = chkNodes.map(node => this.buildXsdnode(node))
+      updateSubversion(this.version, this.subversion, xsdnodes).then(res => {
+        this.$message({
+          type: 'success',
+          message: '更新成功'
+        })
+        const changeNodes = zTree.getChangeCheckedNodes()
+        console.log('变更节点', changeNodes)
+        changeNodes.forEach(node => {
+          if (!node.isParent) {
+            const chkFlag = node.checked
+            if (chkFlag) {
+              // 未选中=>选中
+              node.subversions.push(this.subversion)
+            } else {
+              // 选中=>未选中
+              for (const v of node.subversions) {
+                if (v === this.subversion) {
+                  const index = node.subversions.indexOf(v)
+                  node.subversions.splice(index, 1)
+                  break
+                }
+              }
+            }
+          }
+        })
+      })
+    },
+    recursionChk(nodes, chkFlag) {
+      nodes.forEach(node => {
+        if (node.nocheck !== chkFlag) {
+          node.nocheck = chkFlag
+          this.zTree.updateNode(node)
+        }
+        if (node.isParent) {
+          this.recursionChk(node.children, chkFlag)
+        }
+      })
+    },
     addDomain(item) {
       var index = this.form.dynamicNames.indexOf(item)
       if (index !== -1) {
@@ -1568,8 +1703,17 @@ export default {
           beforeDrop: _this.beforeDrop,
           onDrop: _this.onDrop,
           onClick: _this.onClick
+        },
+        check: {
+          enable: true,
+          // 方便初始化时批量设置，后续不会起作用
+          nocheckInherit: true
         }
       }
+      // 初始化设置节点隐藏选择框
+      treeData.forEach(data => {
+        data.nocheck = true
+      })
       $.fn.zTree.init($('#zTree'), setting, treeData)
       this.zTree = $.fn.zTree.getZTreeObj('zTree')
       // false 过滤不加颜色不高亮提示
