@@ -1,7 +1,7 @@
 <template>
-  <el-container v-loading="loading" :element-loading-text="text">
-    <el-header align="left" style="height: 40px; line-height: 0; padding: 0; padding-bottom: 4px">
-      <el-col>
+  <div v-loading="loading" :element-loading-text="text">
+    <el-row align="left" style="height: 40px; line-height: 0; padding: 0; padding-bottom: 4px">
+      <el-col style="min-width: 588px;">
         <el-button type="success" icon="el-icon-upload" @click="uploadVisible = true" style="margin: 0;">上传验证文件</el-button>
         <el-cascader
           v-model="validateFile"
@@ -39,31 +39,30 @@
         <!-- <el-button type="primary" :disabled="!isUpdateNode || updateShow" @click="handleEdit(treeNode)" style="margin: 0;">编辑</el-button> -->
         <!-- <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode(treeNode)" style="margin: 0;">删除</el-button> -->
       <!-- </el-col> -->
-    </el-header>
-    <!--  style="height: calc(100vh - 164px - 51px); padding: 0" -->
-    <el-container style="height: calc(100vh - 124px - 51px - 40px);">
-      <el-col :span="12" style="margin-right: 8px;">
-        <span>
-          <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" :style="'max-width: calc(100% - 123px' + (isAddRootShow ? ' - 118px' : '') + ')'" />
-          <el-tooltip placement="top" effect="light">
-            <div slot="content">{{ lockType | lockTipFilter }}</div>
-            <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
-          </el-tooltip>
-          <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
-        </span>
-        <div style="height: calc(100% - 36px);">
-          <el-scrollbar class="page-component__scroll">
-            <ul id="zTree" class="ztree" />
-          </el-scrollbar>
+    </el-row>
+    <el-row style="height: calc(100vh - 124px - 51px - 40px); display: flex;" :gutter="8">
+      <el-col :span="12">
+        <div style="height: calc(100%); padding: 1px; border: 1px solid #eee; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)">
+          <div style="min-width: 288px;">
+            <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" :style="'max-width: calc(100% - 123px' + (isAddRootShow ? ' - 118px' : '') + ')'" />
+            <el-tooltip placement="top" effect="light">
+              <div slot="content">{{ lockType | lockTipFilter }}</div>
+              <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
+            </el-tooltip>
+            <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
+          </div>
+          <div style="height: calc(100% - 36px);">
+            <el-scrollbar class="page-component__scroll">
+              <ul id="zTree" class="ztree" />
+            </el-scrollbar>
+          </div>
         </div>
         <!-- <el-tree :data="treeData" :props="{label: 'name'}" node-key="?" draggable highlight-current :allow-drag="handleAllowDrag" :allow-drop="handleAllowDrop" @node-click="handleNodeClick" /> -->
       </el-col>
       <el-col :span="12">
-        <!-- 高度调整为和左侧布局一致 -->
-        <!-- style="height: calc(100vh - 164px - 51px - 40px - 2px);" -->
-        <div style="height: calc(100%);">
+        <div style="height: calc(100%); padding: 1px; padding-top: 36px; border: 1px solid #eee; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)">
           <el-scrollbar class="page-component__scroll">
-            <el-form v-show="isShow" ref="form" :validate-on-rule-change="false" :model="form" label-position="left" label-width="100px" class="demo-table-expand1">
+            <el-form style="padding: 5px;" v-show="isShow" ref="form" :validate-on-rule-change="false" :model="form" label-position="left" label-width="100px" class="demo-table-expand1">
               <el-form-item v-show="addShow" label="父节点名" prop="parentName">
                 <el-input v-model="parentName" :disabled="true" />
               </el-form-item>
@@ -154,7 +153,7 @@
           </el-scrollbar>
         </div>
       </el-col>
-    </el-container>
+    </el-row>
     <el-dialog 
       :visible.sync="dialogVisible"
       width="500px"
@@ -190,7 +189,7 @@
         </uploader-list>
       </uploader>
     </el-dialog>
-  </el-container>
+  </div>
 </template>
 <script>
 import { getFixm, addFixm, updateFixm, updateFixmName, drawFixm, delFixm, keys, map, validateFixm, validateFiles, getValidateMapValue, updateValidateMap, uploadValidateFile, updateSubversion, delSubversion } from '@/api/fixm'
