@@ -1,7 +1,7 @@
 <template>
   <el-container v-loading="loading" :element-loading-text="text">
     <el-header align="left" style="height: 40px; line-height: 0; padding: 0; padding-bottom: 4px">
-      <el-col :span="12">
+      <el-col>
         <el-button type="success" icon="el-icon-upload" @click="uploadVisible = true" style="margin: 0;">上传验证文件</el-button>
         <el-cascader
           v-model="validateFile"
@@ -28,7 +28,7 @@
         <el-button v-show="subversionFlag" type="primary" @click="chsSubversion(subversion)" style="margin: 0;">取消</el-button>
 
       </el-col>
-      <el-col :span="12" style="padding-left: 4px">
+      <!-- <el-col :span="12" style="padding-left: 4px"> -->
         <!-- <el-tooltip placement="top" effect="light">
           <div slot="content">{{ lockType | lockTipFilter }}</div>
           <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
@@ -38,123 +38,121 @@
         <!-- 方案二 -->
         <!-- <el-button type="primary" :disabled="!isUpdateNode || updateShow" @click="handleEdit(treeNode)" style="margin: 0;">编辑</el-button> -->
         <!-- <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode(treeNode)" style="margin: 0;">删除</el-button> -->
-      </el-col>
+      <!-- </el-col> -->
     </el-header>
     <!--  style="height: calc(100vh - 164px - 51px); padding: 0" -->
-    <el-container>
+    <el-container style="height: calc(100vh - 124px - 51px - 40px);">
       <el-col :span="12" style="margin-right: 8px;">
-        <el-card>
-          <span>
-            <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" :style="'max-width: calc(100% - 123px' + (isAddRootShow ? ' - 118px' : '') + ')'" />
-            <el-tooltip placement="top" effect="light">
-              <div slot="content">{{ lockType | lockTipFilter }}</div>
-              <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
-            </el-tooltip>
-            <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
-          </span>
-          <div style="height: calc(100vh - 164px - 51px - 40px - 38px);">
+        <span>
+          <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" :style="'max-width: calc(100% - 123px' + (isAddRootShow ? ' - 118px' : '') + ')'" />
+          <el-tooltip placement="top" effect="light">
+            <div slot="content">{{ lockType | lockTipFilter }}</div>
+            <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
+          </el-tooltip>
+          <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
+        </span>
+        <div style="height: calc(100% - 36px);">
           <el-scrollbar class="page-component__scroll">
-          <ul id="zTree" class="ztree" />
+            <ul id="zTree" class="ztree" />
           </el-scrollbar>
-          </div>
-          <!-- <el-tree :data="treeData" :props="{label: 'name'}" node-key="?" draggable highlight-current :allow-drag="handleAllowDrag" :allow-drop="handleAllowDrop" @node-click="handleNodeClick" /> -->
-        </el-card>
+        </div>
+        <!-- <el-tree :data="treeData" :props="{label: 'name'}" node-key="?" draggable highlight-current :allow-drag="handleAllowDrag" :allow-drop="handleAllowDrop" @node-click="handleNodeClick" /> -->
       </el-col>
       <el-col :span="12">
-        <el-card>
-          <div style="height: calc(100vh - 164px - 51px - 40px - 2px);">
+        <!-- 高度调整为和左侧布局一致 -->
+        <!-- style="height: calc(100vh - 164px - 51px - 40px - 2px);" -->
+        <div style="height: calc(100%);">
           <el-scrollbar class="page-component__scroll">
-          <el-form v-show="isShow" ref="form" :validate-on-rule-change="false" :model="form" label-position="left" label-width="100px" class="demo-table-expand1">
-            <el-form-item v-show="addShow" label="父节点名" prop="parentName">
-              <el-input v-model="parentName" :disabled="true" />
-            </el-form-item>
-            <!-- 增加子节点，有增加多层级子节点需求 -->
-            <el-form-item v-show="addShow" 
-              v-for="(name, index) in form.dynamicNames"
-              :label="'子节点名' + (form.dynamicNames.length > 1 ? (index + 1) : '')"
-              :key="name.key"
-              :prop="'dynamicNames.' + index + '.value'"
-              :rules="addShow ? (index === 0 ? nameAddRule : nameAddChildRule) : {}">
-              <el-input v-model="name.value"></el-input>
-              <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="增加多层级子节点">
-                <el-button type="success" @click="addDomain(name)" style="margin: 0;" icon="el-icon-plus"></el-button>
-              </el-tooltip>
-              <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="移除当前层级节点">
-                <el-button v-show="form.dynamicNames.length > 1" @click="removeDomain(name)" style="margin: 0;" icon="el-icon-minus"></el-button>
-              </el-tooltip>
-            </el-form-item>
-            <!-- 其他操作 节点名项 -->
-            <el-form-item v-show="!addShow" label="节点名" prop="name"
-              :rules="updateShow ? nameEditRule : {}">
-              <el-input v-show="inputShow" v-model="form.name" />
-              <div v-show="!inputShow" class="aspan">{{ form.name }}</div>
-            </el-form-item>
-            <el-form-item v-show="leafShow" label="数据源字段" prop="srcColumn">
-              <el-select v-show="inputShow" v-model="form.srcColumn" style="width: 100%" placeholder="请选择数据源字段" :clearable="true">
-                <el-option v-for="(columnName, index) in keys" :key="index" :label="columnName" :value="columnName" />
-              </el-select>
-              <!-- 值调整，只有出现在list中才展示 -->
-              <div v-show="!inputShow" class="aspan">{{ form.srcColumn }}</div>
-            </el-form-item>
-            <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
-              <div v-show="inputShow">
-                <el-input v-if="dbColumn && dbColumn.javaType === 'String'" 
-                  :type="(dbColumn.length === 0 || dbColumn.length > 50) ? 'textarea' : 'text'"
-                  :maxlength="(dbColumn.length !== 0) ? dbColumn.length : undefined"
-                  show-word-limit
-                  :autosize="{minRows: 2}" 
-                  v-model="upperTestValue" />
-                <el-input-number class="inputNumber" v-else-if="dbColumn && dbColumn.javaType === 'Integer'" 
-                  :min="dbColumn.minValue ? dbColumn.minValue : undefined"
-                  :max="dbColumn.maxValue ? dbColumn.maxValue : undefined"
-                  v-model="numberTestValue" />
-                <el-select v-else-if="dbColumn && dbColumn.javaType === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
-                  <el-option label="true" :value="true" />
-                  <el-option label="false" :value="false" />
+            <el-form v-show="isShow" ref="form" :validate-on-rule-change="false" :model="form" label-position="left" label-width="100px" class="demo-table-expand1">
+              <el-form-item v-show="addShow" label="父节点名" prop="parentName">
+                <el-input v-model="parentName" :disabled="true" />
+              </el-form-item>
+              <!-- 增加子节点，有增加多层级子节点需求 -->
+              <el-form-item v-show="addShow" 
+                v-for="(name, index) in form.dynamicNames"
+                :label="'子节点名' + (form.dynamicNames.length > 1 ? (index + 1) : '')"
+                :key="name.key"
+                :prop="'dynamicNames.' + index + '.value'"
+                :rules="addShow ? (index === 0 ? nameAddRule : nameAddChildRule) : {}">
+                <el-input v-model="name.value"></el-input>
+                <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="增加多层级子节点">
+                  <el-button type="success" @click="addDomain(name)" style="margin: 0;" icon="el-icon-plus"></el-button>
+                </el-tooltip>
+                <el-tooltip :disabled="index !== 0" placement="top" effect="light" content="移除当前层级节点">
+                  <el-button v-show="form.dynamicNames.length > 1" @click="removeDomain(name)" style="margin: 0;" icon="el-icon-minus"></el-button>
+                </el-tooltip>
+              </el-form-item>
+              <!-- 其他操作 节点名项 -->
+              <el-form-item v-show="!addShow" label="节点名" prop="name"
+                :rules="updateShow ? nameEditRule : {}">
+                <el-input v-show="inputShow" v-model="form.name" />
+                <div v-show="!inputShow" class="aspan">{{ form.name }}</div>
+              </el-form-item>
+              <el-form-item v-show="leafShow" label="数据源字段" prop="srcColumn">
+                <el-select v-show="inputShow" v-model="form.srcColumn" style="width: 100%" placeholder="请选择数据源字段" :clearable="true">
+                  <el-option v-for="(columnName, index) in keys" :key="index" :label="columnName" :value="columnName" />
                 </el-select>
-                <!-- el-date-picker尺寸不能通过 form .el-input全局控制，需单独赋值 -->
-                <el-date-picker type="datetime" v-else-if="dbColumn && dbColumn.javaType === 'Date'" value-format="yyyy-MM-dd HH:mm" format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: calc(100% - 120px);" />
-                <el-input v-show="!dbColumn" :disabled="true" />
-              </div>
-              <div v-show="!inputShow" class="aspan">{{ form.testvalue }}</div>
-            </el-form-item>
-            <el-form-item v-show="leafShow" label="节点/属性" prop="isnode"
-              :rules="leafShow ? (inputShow ? nodeRule : {required: false}) : {required: false}">
-              <el-select v-show="inputShow" v-model="form.isnode" clearable style="width: 100%" :disabled="updateShow" placeholder="请选择类型">
-                <el-option label="节点" :value="true" />
-                <el-option label="属性" :value="false" />
-              </el-select>
-              <div v-show="!inputShow" class="aspan">{{ form.isnode ? '节点' : '属性' }}</div>
-            </el-form-item>
-            <el-form-item v-show="leafShow" label="字段解释" prop="explain">
-              <el-input v-show="inputShow" v-model="form.explain" />
-              <div v-show="!inputShow" class="aspan">{{ form.explain }}</div>
-            </el-form-item>
-            <el-form-item v-show="leafShow" label="扩展文件名" prop="fileextension">
-              <el-input v-show="inputShow" v-model="form.fileextension" />
-              <div v-show="!inputShow" class="aspan">{{ form.fileextension }}</div>
-            </el-form-item>
-            <el-form-item v-show="leafShow" label="转换方法" prop="convextension">
-              <el-input v-show="inputShow" v-model="form.convextension" />
-              <div v-show="!inputShow" class="aspan">{{ form.convextension }}</div>
-            </el-form-item>
-            <el-form-item v-show="leafShow" label="是否生效" prop="isvalid">
-              <el-switch v-show="inputShow" v-model="form.isvalid" active-color="#13ce66" />
-              <div v-show="!inputShow" class="aspan">{{ form.isvalid ? '是' : '否' }}</div>
-            </el-form-item>
-            <el-form-item>
-              <!-- 方案一 -->
-              <el-button v-show="updateShow" @click="handleBack" style="margin: 0;">返回</el-button>
-              <el-button v-show="!inputShow" type="primary" @click="handleUpdate" style="margin: 0;">编辑</el-button>
-              <!-- 方案二 -->
-              <!-- <el-button v-show="inputShow && !isAddRootShow" @click="handleInfo(treeNode)" style="margin: 0;">返回</el-button> -->
-              <el-button v-show="addShow" type="primary" @click="addNode(treeNode)" style="margin: 0;">提交</el-button>
-              <el-button v-show="updateShow" type="primary" @click="updateNode(treeNode)" style="margin: 0;">提交</el-button>
-            </el-form-item>
-          </el-form>
+                <!-- 值调整，只有出现在list中才展示 -->
+                <div v-show="!inputShow" class="aspan">{{ form.srcColumn }}</div>
+              </el-form-item>
+              <el-form-item v-show="leafShow" label="测试值" prop="testvalue">
+                <div v-show="inputShow">
+                  <el-input v-if="dbColumn && dbColumn.javaType === 'String'" 
+                    :type="(dbColumn.length === 0 || dbColumn.length > 50) ? 'textarea' : 'text'"
+                    :maxlength="(dbColumn.length !== 0) ? dbColumn.length : undefined"
+                    show-word-limit
+                    :autosize="{minRows: 2}" 
+                    v-model="upperTestValue" />
+                  <el-input-number class="inputNumber" v-else-if="dbColumn && dbColumn.javaType === 'Integer'" 
+                    :min="dbColumn.minValue ? dbColumn.minValue : undefined"
+                    :max="dbColumn.maxValue ? dbColumn.maxValue : undefined"
+                    v-model="numberTestValue" />
+                  <el-select v-else-if="dbColumn && dbColumn.javaType === 'Boolean'" v-model="form.testvalue" style="width: 100%" >
+                    <el-option label="true" :value="true" />
+                    <el-option label="false" :value="false" />
+                  </el-select>
+                  <!-- el-date-picker尺寸不能通过 form .el-input全局控制，需单独赋值 -->
+                  <el-date-picker type="datetime" v-else-if="dbColumn && dbColumn.javaType === 'Date'" value-format="yyyy-MM-dd HH:mm" format="yyyy-MM-dd HH:mm" v-model="form.testvalue" style="width: calc(100% - 120px);" />
+                  <el-input v-show="!dbColumn" :disabled="true" />
+                </div>
+                <div v-show="!inputShow" class="aspan">{{ form.testvalue }}</div>
+              </el-form-item>
+              <el-form-item v-show="leafShow" label="节点/属性" prop="isnode"
+                :rules="leafShow ? (inputShow ? nodeRule : {required: false}) : {required: false}">
+                <el-select v-show="inputShow" v-model="form.isnode" clearable style="width: 100%" :disabled="updateShow" placeholder="请选择类型">
+                  <el-option label="节点" :value="true" />
+                  <el-option label="属性" :value="false" />
+                </el-select>
+                <div v-show="!inputShow" class="aspan">{{ form.isnode ? '节点' : '属性' }}</div>
+              </el-form-item>
+              <el-form-item v-show="leafShow" label="字段解释" prop="explain">
+                <el-input v-show="inputShow" v-model="form.explain" />
+                <div v-show="!inputShow" class="aspan">{{ form.explain }}</div>
+              </el-form-item>
+              <el-form-item v-show="leafShow" label="扩展文件名" prop="fileextension">
+                <el-input v-show="inputShow" v-model="form.fileextension" />
+                <div v-show="!inputShow" class="aspan">{{ form.fileextension }}</div>
+              </el-form-item>
+              <el-form-item v-show="leafShow" label="转换方法" prop="convextension">
+                <el-input v-show="inputShow" v-model="form.convextension" />
+                <div v-show="!inputShow" class="aspan">{{ form.convextension }}</div>
+              </el-form-item>
+              <el-form-item v-show="leafShow" label="是否生效" prop="isvalid">
+                <el-switch v-show="inputShow" v-model="form.isvalid" active-color="#13ce66" />
+                <div v-show="!inputShow" class="aspan">{{ form.isvalid ? '是' : '否' }}</div>
+              </el-form-item>
+              <el-form-item>
+                <!-- 方案一 -->
+                <el-button v-show="updateShow" @click="handleBack" style="margin: 0;">返回</el-button>
+                <el-button v-show="!inputShow" type="primary" @click="handleUpdate" style="margin: 0;">编辑</el-button>
+                <!-- 方案二 -->
+                <!-- <el-button v-show="inputShow && !isAddRootShow" @click="handleInfo(treeNode)" style="margin: 0;">返回</el-button> -->
+                <el-button v-show="addShow" type="primary" @click="addNode(treeNode)" style="margin: 0;">提交</el-button>
+                <el-button v-show="updateShow" type="primary" @click="updateNode(treeNode)" style="margin: 0;">提交</el-button>
+              </el-form-item>
+            </el-form>
           </el-scrollbar>
-          </div>
-        </el-card>
+        </div>
       </el-col>
     </el-container>
     <el-dialog 
@@ -1745,7 +1743,7 @@ export default {
     height: 100%;
   }
   .page-component__scroll .el-scrollbar__wrap {
-    overflow-x: auto;
+    overflow-x: hidden;
   }
   .ztree li span.button.add {
     margin-left:2px; 
@@ -1763,7 +1761,7 @@ export default {
   .demo-table-expand1 .el-form-item {
     /* margin-right: 0; */
     /* margin-bottom: 0; */
-    width: 70%;
+    width: 100%;
   }
   .demo-table-expand1 .el-input {
     width: calc(100% - 120px);

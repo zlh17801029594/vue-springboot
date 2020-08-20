@@ -1,5 +1,5 @@
 <template>
-  <div class="tab-container">
+  <div class="tab-container" style="height: calc(100vh - 124px - 51px);">
     <div>
       <!-- 添加版本不能同名 -->
       <el-button
