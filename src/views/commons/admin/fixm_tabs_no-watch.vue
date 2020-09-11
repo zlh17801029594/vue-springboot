@@ -74,7 +74,7 @@ export default {
     fixmVersions() {
       fixmVersions().then(response => {
         this.tabMapOptions = response.data
-        // console.log('methods', this.tabMapOptions)
+        console.log('methods', this.tabMapOptions)
         if (this.tabMapOptions && this.tabMapOptions.length) {
           const tab = this.$route.query.tab
           console.log(this.tabMapOptions, tab)
@@ -85,7 +85,6 @@ export default {
           }
           // this.activeName = this.tabMapOptions[0]
         }
-        this.$watch('activeName', this.activeNameHandler)
       })
     },
     addVersion() {

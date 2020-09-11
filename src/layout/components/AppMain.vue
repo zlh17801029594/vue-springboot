@@ -13,11 +13,11 @@ export default {
   name: 'AppMain',
   computed: {
     cachedViews() {
-      // console.log('缓存路由',this.$store.state.tagsView.cachedViews)
+      console.log('缓存路由',this.$store.state.tagsView.cachedViews)
       return this.$store.state.tagsView.cachedViews
     },
     key() {
-      // console.log("key",this.$route.path)
+      console.log("key",this.$route.path)
       return this.$route.path
     }
   }

@@ -244,37 +244,55 @@ export const asyncRoutes1 = [
   //   ]
   // },
 
+  // {
+  //   path: '/fixm',
+  //   component: Layout,
+  //   children: [
+  //     {
+  //       path: 'index',
+  //       component: () => import('@/views/commons/admin/fixm_tabs'),
+  //       name: 'fixm',
+  //       meta: {
+  //         title: 'FIXM管理',
+  //         icon: 'component'
+  //       }
+  //     }
+  //   ]
+  // },
+
+  // {
+  //   path: '/fixm_test',
+  //   component: Layout,
+  //   children: [
+  //     {
+  //       path: 'index',
+  //       component: () => import('@/views/commons/admin/fixm_ztree_subversion'),
+  //       name: 'fixm_test',
+  //       meta: {
+  //         title: 'FIXM子版本演示',
+  //         icon: 'component'
+  //       }
+  //     }
+  //   ]
+  // },
+
   {
-    path: '/fixm',
+    path: '/fixm_menutree',
     component: Layout,
     children: [
       {
         path: 'index',
-        component: () => import('@/views/commons/admin/fixm_tabs'),
-        name: 'fixm',
+        component: () => import('@/views/commons/admin/fixm_menutree'),
+        name: 'fixm_menutree',
         meta: {
+          // title: 'FIXM子版本tree菜单',
           title: 'FIXM管理',
           icon: 'component'
         }
       }
     ]
   },
-
-  {
-    path: '/fixm_test',
-    component: Layout,
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/commons/admin/fixm_ztree_subversion'),
-        name: 'fixm_test',
-        meta: {
-          title: 'FIXM子版本演示',
-          icon: 'component'
-        }
-      }
-    ]
-  },
+  // nestedRouter,
 
   // 404 page must be placed at the end !!!
   // { path: '*', redirect: '/404', hidden: true }

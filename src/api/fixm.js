@@ -112,6 +112,13 @@ export function delFixmByVersion(version) {
   })
 }
 
+export function fixmSubversions() {
+  return request({
+    url: '/fixm/subversions',
+    method: 'get'
+  })
+}
+
 export function updateSubversion(version, subversion, xsdnodes) {
   return request({
     url: `/fixmlogic/${version}/subversion/${subversion}`,
@@ -120,7 +127,7 @@ export function updateSubversion(version, subversion, xsdnodes) {
   })
 }
 
-export function delSubversion(version) {
+export function delSubversion(version, subversion) {
   return request({
     url: `/fixmlogic/${version}/subversion/${subversion}`,
     method: 'delete'

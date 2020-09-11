@@ -21,11 +21,6 @@
         <el-tooltip content="对当前数据进行一次验证！" placement="top" effect="light" :hide-after="3000">
           <el-button type="primary" @click="handleValidateFixm()" style="margin: 0;">验证</el-button>
         </el-tooltip>
-        <el-input v-model="subversion1" style="width: 80px;" placeholder="子版本" />
-        <el-button type="primary" @click="chsSubversion(subversion1)" style="margin: 0;">选取</el-button>
-        <el-button v-show="subversionFlag" type="danger" @click="delSubversion" style="margin: 0;">删除</el-button>
-        <el-button v-show="subversionFlag" @click="subversionEdit ? saveSubversion() : updateSubversion()" style="margin: 0;">{{ subversionEdit ? '保存' : '编辑' }}</el-button>
-        <el-button v-show="subversionFlag" type="primary" @click="chsSubversion(subversion)" style="margin: 0;">取消</el-button>
 
       </el-col>
       <!-- <el-col :span="12" style="padding-left: 4px"> -->
@@ -40,16 +35,26 @@
         <!-- <el-button type="danger" :disabled="!isDeleteNode" @click="handleDeleteNode(treeNode)" style="margin: 0;">删除</el-button> -->
       <!-- </el-col> -->
     </el-row>
-    <el-row style="height: calc(100vh - 124px - 51px - 40px); display: flex;" :gutter="8">
+    <el-row style="height: calc(100vh - 124px - 40px); display: flex;" :gutter="8">
       <el-col :span="12">
-        <div style="height: calc(100%); padding: 1px; border: 1px solid #eee; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)">
+        <div style="height: calc(100%); padding: 1px; border: 1px solid #eee; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 4px;">
           <div style="min-width: 288px;">
-            <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" :style="'max-width: calc(100% - 123px' + (isAddRootShow ? ' - 118px' : '') + ')'" />
-            <el-tooltip placement="top" effect="light">
+            <el-input id="key" v-model="key" placeholder="请输入关键字" prefix-icon="el-icon-search" 
+              :style="'width: calc(100%' + ( subversion ? (subversionEdit ? ' - 145px' : ' - 123px') : (' - 123px' + (isAddRootShow ? ' - 118px' : ''))) + ')'" />
+            <el-tooltip placement="top" :enterable="false" effect="light">
               <div slot="content">{{ lockType | lockTipFilter }}</div>
-              <el-button :type="lockType === 'lock' ? 'primary' : 'success'" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
+              <el-button :type="lockType === 'lock' ? 'primary' : 'success'" v-show="!subversion" :icon="lockType | lockIconFilter" @click="lockType = lockType === 'lock' ? 'unlock' : 'lock'" style="margin: 0;">{{ lockType | lockTextFilter }}</el-button>
             </el-tooltip>
-            <el-button type="primary" v-show="isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
+            <el-button type="primary" v-show="!subversion && isAddRootShow" @click="handleAddRoot" style="margin: 0;">添加根节点</el-button>
+            
+            <el-tooltip placement="top" :enterable="false" effect="light">
+              <div slot="content">从版本中<span style="color: teal">勾选/取消勾选</span>节点</div>
+              <el-button v-show="subversion && !subversionEdit" type="primary" icon="el-icon-edit" @click="editSubversion()" style="margin: 0;">编辑模板</el-button>
+            </el-tooltip>
+            <el-button-group v-show="subversion && subversionEdit">
+              <el-button type="success" @click="saveSubversion()">保存</el-button>
+              <el-button type="" @click="chsSubversion()">取消</el-button>
+            </el-button-group>
           </div>
           <div style="height: calc(100% - 36px);">
             <el-scrollbar class="page-component__scroll">
@@ -60,7 +65,7 @@
         <!-- <el-tree :data="treeData" :props="{label: 'name'}" node-key="?" draggable highlight-current :allow-drag="handleAllowDrag" :allow-drop="handleAllowDrop" @node-click="handleNodeClick" /> -->
       </el-col>
       <el-col :span="12">
-        <div style="height: calc(100%); padding: 1px; padding-top: 36px; border: 1px solid #eee; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)">
+        <div style="height: calc(100%); padding: 1px; padding-top: 36px; border: 1px solid #eee; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 4px;">
           <el-scrollbar class="page-component__scroll">
             <el-form style="padding: 5px;" v-show="isShow" ref="form" :validate-on-rule-change="false" :model="form" label-position="left" label-width="100px" class="demo-table-expand1">
               <el-form-item v-show="addShow" label="父节点名" prop="parentName">
@@ -143,7 +148,7 @@
               <el-form-item>
                 <!-- 方案一 -->
                 <el-button v-show="updateShow" @click="handleBack" style="margin: 0;">返回</el-button>
-                <el-button v-show="!inputShow" type="primary" @click="handleUpdate" style="margin: 0;">编辑</el-button>
+                <el-button v-show="!inputShow && !subversion" type="primary" @click="handleUpdate" style="margin: 0;">编辑</el-button>
                 <!-- 方案二 -->
                 <!-- <el-button v-show="inputShow && !isAddRootShow" @click="handleInfo(treeNode)" style="margin: 0;">返回</el-button> -->
                 <el-button v-show="addShow" type="primary" @click="addNode(treeNode)" style="margin: 0;">提交</el-button>
@@ -182,11 +187,15 @@
         <uploader-drop>
           <uploader-btn :directory="true" :single="true">上传验证文件</uploader-btn>
         </uploader-drop>
-        <uploader-list>
+        <!-- <uploader-list>
           <template slot="file-list" scope="fileLists">
             <p>{{ fileLists }}</p>
+            <p>{{ fileLists.size }}</p>
           </template>
-        </uploader-list>
+        </uploader-list> -->
+        <template slot-scope="files">
+          <p>{{ files }}</p>
+        </template>
       </uploader>
     </el-dialog>
   </div>
@@ -328,8 +337,6 @@ export default {
       },
       dropTypes: [true, true, true],
       lockType: 'lock',
-      subversion1: '',
-      subversion: '',
       subversionFlag: false,
       subversionEdit: false
     }
@@ -349,6 +356,10 @@ export default {
     version: {
       type: String,
       default: 'core4.1'
+    },
+    subversion: {
+      type: String,
+      default: ''
     }
   },
   computed: {
@@ -398,6 +409,11 @@ export default {
     this.getList()
   },
   methods: {
+    subversionHandler(newVal, oldVal) {
+      console.log('子模板', newVal, oldVal)
+      this.chsSubversion()
+      // this.zTree.setting.edit.showRemoveBtn = newVal === ''
+    },
     handleHideAll(){
       const showNodes = this.zTree.getNodesByParam('isHidden', false)
       this.zTree.hideNodes(showNodes)
@@ -407,12 +423,12 @@ export default {
       this.zTree.showNodes(hideNodes)
     },
     filterSubversion(node, subversion) {
-      return (node.subversions && node.subversions.indexOf(subversion) !== -1)
+      // 条件：1.非目录、2.子模板列表包含当前子模板
+      return (!node.isParent && node.subversions && node.subversions.indexOf(subversion) !== -1)
     },
     // 类似点击菜单回调
-    chsSubversion(subversion1) {
+    chsSubversion() {
       const zTree = this.zTree
-      this.subversion = subversion1
       const subversion = this.subversion
       if (subversion) {
         this.handleHideAll()
@@ -422,16 +438,16 @@ export default {
             zTree.showNodes(node.getPath())
           })
         }
-        // 临时 代表进入子版本，可删除、编辑
+        // 临时 代表进入子模板，可删除、编辑
         this.subversionFlag = true
       } else {
         this.handleShowAll()
-        // 未进入如何子版本
+        // 未进入任何子模板
         this.subversionFlag = false
       }
       // 后续操作可以理解为初始化
 
-      // 切换子版本 隐藏勾选框(放在展示节点后)
+      // 切换子模板 隐藏勾选框(顺序放在展示节点后，先渲染、再隐藏)
       const rootNodes = zTree.getNodes()
       if (rootNodes && rootNodes.length) {
         this.recursionChk(rootNodes, true)
@@ -439,12 +455,8 @@ export default {
       // 重置编辑
       this.subversionEdit = false
     },
-    // 移除子版本
-    delSubversion() {
-
-    },
     // 编辑/取消编辑 子节点操作
-    updateSubversion() {
+    editSubversion() {
       const zTree = this.zTree
       // 展示所有节点
       this.handleShowAll()
@@ -466,7 +478,7 @@ export default {
         }
         this.subversionEdit = true
       }
-      // 记录当前勾选情况，用于更新成功后，实时修改subversions属性
+      // 记录当前勾选情况，用于更新成功后，局部修改subversions属性
       this.recursionBak(zTree.getNodes())
     },
     recursionBak(nodes) {
@@ -483,33 +495,49 @@ export default {
     // 保存 子节点操作
     saveSubversion() {
       const zTree = this.zTree
-      const chkNodes = zTree.getNodesByFilter(this.filterChecked, false, null, true)
-      const xsdnodes = chkNodes.map(node => this.buildXsdnode(node))
-      updateSubversion(this.version, this.subversion, xsdnodes).then(res => {
+      const subversion = this.subversion
+      // 记录布局更新
+      const changeNodes = zTree.getChangeCheckedNodes()
+      console.log('变更节点', changeNodes)
+      const chkNodes = [], cancelChkNodes = []
+      changeNodes.forEach(node => {
+        if (!node.isParent) {
+          const chkFlag = node.checked
+          if (chkFlag) {
+            // 未选中=>选中
+            chkNodes.push(node)
+          } else {
+            // 选中=>未选中
+            cancelChkNodes.push(node)
+          }
+        }
+      })
+      console.log('实际变更', chkNodes, cancelChkNodes)
+      // 记录全局更新[即只关注当前所有选中的节点]
+      // const chkNodes = zTree.getNodesByFilter(this.filterChecked, false, null, true)
+      const chkXsdnodes = chkNodes.map(node => this.buildXsdnode(node))
+      const cancelChkXsdnodes = cancelChkNodes.map(node => this.buildXsdnode(node))
+      updateSubversion(this.version, subversion, {
+        'chkXsdnodes': chkXsdnodes,
+        'cancelChkXsdnodes': cancelChkXsdnodes
+      }).then(res => {
         this.$message({
           type: 'success',
           message: '更新成功'
         })
-        const changeNodes = zTree.getChangeCheckedNodes()
-        console.log('变更节点', changeNodes)
-        changeNodes.forEach(node => {
-          if (!node.isParent) {
-            const chkFlag = node.checked
-            if (chkFlag) {
-              // 未选中=>选中
-              node.subversions.push(this.subversion)
-            } else {
-              // 选中=>未选中
-              for (const v of node.subversions) {
-                if (v === this.subversion) {
-                  const index = node.subversions.indexOf(v)
-                  node.subversions.splice(index, 1)
-                  break
-                }
-              }
+        chkNodes.forEach(node => {
+          node.subversions.push(subversion)
+        })
+        cancelChkNodes.forEach(node => {
+          for (const v of node.subversions) {
+            if (v === subversion) {
+              const index = node.subversions.indexOf(v)
+              node.subversions.splice(index, 1)
+              break
             }
           }
         })
+        this.chsSubversion()
       })
     },
     recursionChk(nodes, chkFlag) {
@@ -558,6 +586,7 @@ export default {
         // this.text = '加载中...'
         this.treeData.forEach(item => this.recurisionTreeData(item, 1))
         this.initTree(this.treeData)
+        this.$watch('subversion', this.subversionHandler, {immediate: true})
         // this.loading = false
 
         validateFiles(this.version).then(response => {
@@ -737,7 +766,6 @@ export default {
         const child = this.buildNode(nodes, fixmLogic)
         return {
           name: name,
-          isnode: true,
           children: [child]
         }
       } else {
@@ -815,7 +843,7 @@ export default {
       return {
         name: treeNode.name,
         srcColumn: treeNode.srcColumn,
-        // 此字段也可脱离表单
+        // 此字段也可脱离表单(调整： 后台已经不返回该字段)
         // testvalue: treeNode.testvalue,
         isnode: treeNode.isnode,
         explain: treeNode.explain,
@@ -1003,11 +1031,11 @@ export default {
           const orderChildName = this.findOrderChildName(treeNode)
           const nodeOrderChildName = orderChildName[0]
           const propertyOrderChildName = orderChildName[1]
-          if (typeof isnode === 'undefined' || isnode) {
-            // 添加
+          if (isnode) {
+            // 添加 节点/多层级(目录)
             nodeOrderChildName.push(name)
           } else {
-            // 添加
+            // 添加 单层级属性
             propertyOrderChildName.push(name)
           }
           const nodeOrder = this.convertOrder(nodeOrderChildName)
@@ -1034,12 +1062,17 @@ export default {
               const nodes = name.split('->')
               let node
               if (nodes.length == 1) {
-                node = this.form
+                node = Object.assign({}, this.form, {'subversions': []})
               } else {
-                node = this.buildNode(nodes, this.form)
+                node = this.buildNode(nodes, Object.assign({}, this.form, {'subversions': []}))
               }
               // 添加节点位置
               const index = this.addChildIndex(treeNode, isnode)
+              // 判断隐藏添加根节点按钮、更新check状态
+              if (treeNode === null && this.isAddRootShow) {
+                this.isAddRootShow = false
+                node.nocheck = true
+              }
               const newNodes = zTree.addNodes(treeNode, index, node)
               if (newNodes[0].isParent) {
                 // 添加多层级子节点 展开全部子节点
@@ -1050,10 +1083,6 @@ export default {
               // 焦点变更为添加的节点              
               const realNode = this.findRealChild(newNodes[0])
               this.handleSelect(realNode)
-              // 判断隐藏添加根节点按钮
-              if (treeNode === null && this.isAddRootShow) {
-                this.isAddRootShow = false
-              }
               // 验证
               if (srcColumn) {
                 this.validateFixm()
@@ -1166,7 +1195,7 @@ export default {
     },
     // targetNode可能为null(根节点)
     handleDragFixm(drawProp) {
-      const treeId = drawProp.treeId, treeNodes = drawProp.treeNodes, targetNode = drawProp.targetNode, moveType = drawProp.moveType
+      let treeId = drawProp.treeId, treeNodes = drawProp.treeNodes, targetNode = drawProp.targetNode, moveType = drawProp.moveType
       console.log(treeNodes, targetNode, targetNode ? targetNode.name : '根节点', moveType)
       const zTree = this.zTree
       const sourceNode = treeNodes[0]
@@ -1317,11 +1346,15 @@ export default {
         propertyOrder: propertyOrder,
         newNodeOrder: newNodeOrder,
         newPropertyOrder: newPropertyOrder
-      }).then(response => {
+      }).then(_ => {
         this.$message({
           type: 'success',
           message: '操作成功'
         })
+        // 拖动的saveFather判断再写一个逻辑，判断targetNode是否为当前节点的父节点，inner、pre、next
+        if (saveFather) {
+          this.updateFatherNode(sourceNode)
+        }
         this.dialogVisible = false
         // 拖拽节点
         zTree.moveNode(targetNode, treeNodes[0], moveType)
@@ -1341,6 +1374,19 @@ export default {
           this.getList()
         }
       })
+    },
+    // 保留父节点后续操作 => 初始化父节点 isnode、isvalid、subversions 
+    updateFatherNode(treeNode) {
+      const pNode = treeNode.getParentNode()
+      // 通过isnode判断父节点是否有对应数据，isnode为undefined则为目录，需要初始化isnode、isvalid、subversions属性
+      const isnode = pNode.isnode
+      if (typeof isnode === 'undefined') {
+        // 空目录
+        pNode.isnode = true
+        // this.$set(pNode, 'isnode', true)
+        pNode.isvalid = true
+        pNode.subversions = []
+      }
     },
     async handleDeleteNode(treeNode1) {
       const zTree = this.zTree
@@ -1407,6 +1453,9 @@ export default {
             type: 'success',
             message: '操作成功'
           })
+          if (saveFather) {
+            this.updateFatherNode(treeNode)
+          }
           zTree.removeNode(treeNode, false)
           // 无节点数据时 zTree.getNodes() 的值不为[],为undefined
           if (!treeNode.parentTId && !zTree.getNodes()) {
@@ -1567,13 +1616,15 @@ export default {
     beforeDrag(treeId, treeNodes) {
       // console.log('this.lockType !== \'lock\'', this.lockType !== 'lock')
       if (this.lockType === 'lock') {
-        this.$notify({
-          title: '拖动提示',
-          message: '布局已锁定！请先解锁',
-          type: 'warning',
-          duration: 3000,
-          offset: 100
-        })
+        if (!this.subversion) {
+          this.$notify({
+            title: '拖动提示',
+            message: '布局已锁定！请先解锁',
+            type: 'warning',
+            duration: 3000,
+            offset: 100
+          })
+        }
         return false
       } else {
         this.handleSelect(treeNodes[0])
@@ -1590,11 +1641,11 @@ export default {
       this.handleSelect(treeNode)
     },
     fontCss(treeId, treeNode) {
-      const isNode = treeNode.isnode
+      const isnode = treeNode.isnode
       if (treeNode.isParent) {
         return {}
       }
-      if (typeof isNode === 'undefined' || isNode) {
+      if (typeof isnode === 'undefined' || isnode) {
         return { 'color': 'blue' }
       }
       return { 'color': '#32CD32' }
@@ -1648,23 +1699,30 @@ export default {
       return false
     },
     addHoverDom(treeId, treeNode) {
-      var sObj = $("#" + treeNode.tId + "_span");
-			if (treeNode.isnode === false || $("#addBtn_"+treeNode.tId).length>0) return;
-			var addStr = "<span class='button add' id='addBtn_" + treeNode.tId
-				+ "' title='添加子节点' onfocus='this.blur();'></span>";
-			sObj.after(addStr);
-			var btn = $("#addBtn_"+treeNode.tId);
-			if (btn) btn.bind("click", () => {
-        this.handleAdd(treeNode)
-        return false
-      });
+      if (!this.subversion) {
+        var sObj = $("#" + treeNode.tId + "_span");
+        if (treeNode.isnode === false || $("#addBtn_"+treeNode.tId).length>0) return;
+        var addStr = "<span class='button add' id='addBtn_" + treeNode.tId
+          + "' title='添加子节点' onfocus='this.blur();'></span>";
+        sObj.after(addStr);
+        var btn = $("#addBtn_"+treeNode.tId);
+        if (btn) btn.bind("click", () => {
+          this.handleAdd(treeNode)
+          return false
+        });
+      }
 		},
 		removeHoverDom(treeId, treeNode) {
-			$("#addBtn_"+treeNode.tId).unbind().remove();
+      // if (!this.subversion) {
+        $("#addBtn_"+treeNode.tId).unbind().remove();
+      // }
     },
     beforeRemove(treeId, treeNode) {
       this.handleDeleteNode(treeNode)
       return false
+    },
+    showRemoveBtn() {
+      return this.subversion === ''
     },
     initTree(treeData) {
       const _this = this
@@ -1692,7 +1750,7 @@ export default {
           enable: true,
           removeTitle: '删除节点',
           showRenameBtn: false,
-          showRemoveBtn: true
+          showRemoveBtn: _this.showRemoveBtn
         },
         callback: {
           beforeRemove: _this.beforeRemove,
