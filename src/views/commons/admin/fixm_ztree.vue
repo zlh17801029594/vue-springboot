@@ -183,20 +183,44 @@
       width="500px"
       center>
       <!-- 上传验证文件 -->
-      <uploader :key="uploader_key" :options="uploaderOptions" class="uploader-example" @file-success="onFileSuccess" >
-        <uploader-drop>
+      <uploader :key="uploader_key" :options="uploaderOptions" class="uploader-example" @file-success="onFileSuccess" @file-added="fileAdded" >
+        <!-- <uploader-drop>
           <uploader-btn :directory="true" :single="true">上传验证文件</uploader-btn>
         </uploader-drop>
-        <!-- <uploader-list>
-          <template slot="file-list" scope="fileLists">
+        <uploader-list>
+          <template slot-scope="fileLists">
             <p>{{ fileLists }}</p>
-            <p>{{ fileLists.size }}</p>
+            <p>{{ fileLists.fileList }}</p>
+            <p>{{ fileLists.fileList.length }}</p>
           </template>
         </uploader-list> -->
         <template slot-scope="files">
+          <uploader-drop>
+            <uploader-btn :directory="true" :single="true">上传验证文件</uploader-btn>
+          </uploader-drop>
+          <!-- <uploader-list>
+            <template slot-scope="fileLists">
+              <p>{{ fileLists }}</p>
+              <p>{{ fileLists.fileList }}</p>
+              <p>{{ fileLists.fileList.length }}</p>
+            </template>
+          </uploader-list> -->
+          <p>{{ files.files.length }}</p>
+          <p>{{ files.fileList.length }}</p>
+          <p>{{ files.started }}</p>
           <p>{{ files }}</p>
+          <!-- <uploader-files/> -->
+          <uploader-files>
+            <uploader-file v-for="(item, index) in files.files" :key="index" :file="item" :list="false"></uploader-file>
+          </uploader-files>
+          <uploader-list>
+            <uploader-file v-for="(item, index) in files.fileList" :key="index" :file="item" :list="true"></uploader-file>
+          </uploader-list>
+          <!-- <upload-file :file="files.files"></upload-file> -->
         </template>
       </uploader>
+      <uploader/>
+      <!-- <uploader-file/> -->
     </el-dialog>
   </div>
 </template>
@@ -619,6 +643,12 @@ export default {
     // vue-simple-uploader回调函数
     onFileSuccess(rootFile, file, response, chunk) {
 
+    },
+    fileAdded(file) {
+      console.log(file)
+      console.log(file.name)
+      console.log(file.relativePath)
+      file.name = file.relativePath
     },
     // el-cascader级联选择器 用户开始输入，提前备份validateFileOrign
     focus() {
